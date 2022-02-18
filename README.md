@@ -7,7 +7,7 @@
 * **Rs.data** - Database model
 
 ### Experimenting with :rocket: :whale: :wheel_of_dharma:
-* Azure pipelinew 
+* Azure pipeline
 * Docker
 * Kubernetes 
 
