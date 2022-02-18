@@ -1,0 +1,332 @@
+﻿@{
+    ViewData["Title"] = "Release";
+}
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+    const type = [];
+    type["Bug"] = { icon: "bug", className: "cBug" };
+    type["Task"] = { icon: "sticky-note", className: "cTask" };
+    type["UserStory"] = { icon: "leanpub", className: "cUserStory" };
+    type["Feature"] = { icon: "trophy", className: "cFeature" };
+
+    const badge = [];
+    badge["completed"] = "success";
+    badge["active"] = "warning";
+
+    let $table;
+
+    const releases = ["07/09", "07/23"];
+
+    let lstTable;
+
+    async function getData() {
+        let lstQryRes = await fetch(`${releaseReportURl}`);
+        let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
+        let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.toString()}&$expand=relations`);
+
+        //QRY result
+        let lstRows = lstWI.value.map(function (item) {
+            return wiMapper(item);
+        });
+
+        //Clean US
+        let lstRowsClean = lstRows.filter(function (row) {
+            let releaseDate = row.ReleaseDate === undefined ? '-1' : moment(row.ReleaseDate).format("MM/DD").toString();
+            if (row.Type === 'User Story' && releases.indexOf(releaseDate) === -1) {
+                let hasChilds = lstRows.filter(wi => wi.ParentId == row.Id).length;
+                if (hasChilds > 0)
+                    return row;
+            }
+            else return row;
+        });
+
+        //Clean Features
+        lstRowsClean = lstRowsClean.filter(function (row) {
+            let releaseDate = row.ReleaseDate === undefined ? '-1' : moment(row.ReleaseDate).format("MM/DD").toString();
+            if (row.Type === 'Feature' && releases.indexOf(releaseDate) === -1) {
+                let hasChilds = lstRowsClean.filter(wi => wi.ParentId == row.Id).length;
+                if (hasChilds > 0)
+                    return row;
+            }
+            else return row;
+        });
+
+        return lstRowsClean;
+    }
+
+    function getSummary(lstRows) {
+        let summary = {
+            QaPassed: 0,
+            QaTesting: 0,
+            QaFailed: 0,
+            QaDeploy: 0,
+            DevReview: 0,
+            Development: 0,
+            MoreInfo: 0,
+            ReadyForDev: 0,
+            Count: 0
+        }
+
+        lstRows.map(function (row) {
+            if (row.Type == "Task" || row.Type == "Bug") {
+                summary.Count++;
+                if (row.State == "QA Passed" || row.State == "Resolved")
+                    summary.QaPassed++;
+                if (row.State == "QA" || row.State == "QA Failed")
+                    summary.QaTesting++;
+                if (row.State == "QA Failed")
+                    summary.QaFailed++;
+                if (row.State == "Waiting QA Deployment")
+                    summary.QaDeploy++;
+                if (row.State == "Dev Review")
+                    summary.DevReview++;
+                if (row.State == "Active" || row.State == "More Info" || row.State == "Development")
+                    summary.Development++;
+                if (row.State == "More Info")
+                    summary.MoreInfo++;
+                if (row.State == "Ready for Dev" || row.State == "New")
+                    summary.ReadyForDev++;
+            }
+        });
+
+        return summary;
+    }
+
+    function wiMapper(item) {
+        return {
+            Id: item.id,
+            Title: item.fields['System.Title'],
+            State: item.fields['System.State'],
+            Type: item.fields['System.WorkItemType'],
+            ReleaseDate: item.fields['Custom.ReleaseDate'],
+            ParentId: item.fields['System.Parent'] === undefined ? '' : item.fields['System.Parent'],
+            ClientandBusinessCommitted: item.fields['Custom.ClientandBusinessCommitted'],
+            Priority: item.fields['Microsoft.VSTS.Common.Priority'],
+            Risk: item.fields['Microsoft.VSTS.Common.Risk'],
+            Severity: item.fields['Microsoft.VSTS.Common.Severity'],
+            WorkItemType: item.fields['System.WorkItemType'],
+            InternationalDevOpsID: item.fields['Custom.InternationalDevOpsID'],
+            State: item.fields['System.State'],
+            Tags: item.fields['System.Tags'],
+            Title: item.fields['System.Title'],
+            ReleaseDate: item.fields['Custom.ReleaseDate'],
+            ProjectManager: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].uniqueName,
+            IterationPath: item.fields['System.IterationPath'],
+            AssignedTo: item.fields['System.AssignedTo'] === undefined ? '' : item.fields['System.AssignedTo'].uniqueName,
+            LOE: item.fields['Custom.LOE'],
+            DevStartDate: item.fields['Custom.DevStartDate'],
+            DevEndDate: item.fields['Custom.DevEndDate'],
+            DevPctComplete: item.fields['Custom.DevPctComplete'],
+            OriginalEstimate: item.fields['Microsoft.VSTS.Scheduling.OriginalEstimate'],
+            RemainingWork: item.fields['Microsoft.VSTS.Scheduling.RemainingWork'],
+            CompletedWork: item.fields['Microsoft.VSTS.Scheduling.CompletedWork'],
+            DueDate: item.fields['Microsoft.VSTS.Scheduling.DueDate'],
+            ConfigChanges: item.fields['Custom.ConfigChanges'],
+            QAResource: item.fields['Custom.QAResource'] === undefined ? '' : item.fields['Custom.QAResource'].uniqueName,
+            StartDate: item.fields['Microsoft.VSTS.Scheduling.StartDate'],
+            EndDate: item.fields['Custom.EndDate'],
+            QALOE: item.fields['Custom.QALOE'],
+            QAActualHours: item.fields['Custom.QAActualHours']
+        };
+    }
+
+    function renderTable() {
+        $table = $("#pr-report").DataTable({
+            pageLength: 1000,
+            dom: 'Bfrtip',
+            ordering: false,
+            select: true,
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'Release Plan',
+            }],
+            columns: [
+                {
+                    title: "Type", data: "Type", className: "dt-center", render: function (value, meta, row) {
+                        let c = row.Type.replace(' ', '');
+                        return `<i class="fa fa-${type[c].icon} ${type[c].className}"></i>`;
+                    }
+                },
+                { title: "WI Id", data: "Id", render: function (value) { return formatLink(wiBaseUrl + value, value); } },
+                { title: "Committed", data: "ClientandBusinessCommitted", defaultContent: "" },
+                { title: "Priority", data: "Priority", defaultContent: "" },
+                { title: "Risk", data: "Risk", defaultContent: "" },
+                { title: "Severity", data: "Severity", defaultContent: "" },
+                { title: "Work Item Type", data: "WorkItemType", defaultContent: "" },
+                { title: "DevOps ID", data: "InternationalDevOpsID", defaultContent: "" },
+                { title: "State", data: "State", defaultContent: "" },
+                { title: "Tags", data: "Tags", defaultContent: "" },
+                { title: "Title", data: "Title", defaultContent: "" },
+                { title: "Release Date", data: "ReleaseDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "Project Manager", data: "ProjectManager", defaultContent: "" },
+                { title: "Iteration Path", data: "IterationPath", defaultContent: "" },
+                { title: "Assigned To", data: "AssignedTo", defaultContent: "" },
+                { title: "LOE", data: "LOE", defaultContent: "" },
+                { title: "Dev Start Date", data: "DevStartDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "Dev End Date", data: "DevEndDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "Dev Pct Complete", data: "DevPctComplete", defaultContent: "" },
+                { title: "Original Estimate", data: "OriginalEstimate", defaultContent: "" },
+                { title: "Remaining Work", data: "RemainingWork", defaultContent: "" },
+                { title: "Completed Work", data: "CompletedWork", defaultContent: "" },
+                { title: "Due Date", data: "DueDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "Config Changes", data: "ConfigChanges", defaultContent: "" },
+                { title: "QA Resource", data: "QAResource", defaultContent: "" },
+                { title: "Star tDate", data: "StartDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "End Date", data: "EndDate", defaultContent: "", render: function (value) { return formatDate(value); } },
+                { title: "QA LOE", data: "QALOE", defaultContent: "" },
+                { title: "Actual Hours", data: "QAActualHours", defaultContent: "" },
+            ],
+            "createdRow": function (row, data, dataIndex) {
+                $(row).addClass(`r${data.Type.replace(' ', '')}`);
+                if (data.Type == "Task" || data.Type == "Bug") {
+                    let releaseDate = data.ReleaseDate === undefined ? '-1' : moment(data.ReleaseDate).format("MM/DD").toString();
+                    if (releases.indexOf(releaseDate) === -1)
+                        $(row).addClass("cWarning");
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        releases.map(function (r) {
+            $("#ddlRelease").append(new Option(r, r))
+        });
+
+        $("#ddlRelease").change(function (e) {
+
+            let lstTask = lstTable.filter(row => (row.Type == "Task" || row.Type == "Bug") && moment(row.ReleaseDate).format("MM/DD").toString() == this.value);
+
+            let lstUS = [];
+            lstTask.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature")  && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstUS.filter(row => row.Id == item.Id).length;
+                    if(test == 0)
+                        lstUS.push(item);
+                })
+            });
+
+            let lstFeature = [];
+            lstUS.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature") && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstFeature.filter(row => row.Id == item.Id).length;
+                    if (test == 0)
+                        lstFeature.push(item);
+                })
+            });
+
+            let lstRows = [...lstTask, ...lstUS, ...lstFeature];
+            lstRows = [...new Set(lstRows)];
+
+
+            lstRows = assemble(lstRows);
+
+            let sum = getSummary(lstRows);
+            $("#QaPassed").text(sum.QaPassed);
+            $("#QaTesting").text(sum.QaTesting);
+            $("#QaFailed").text(sum.QaFailed);
+            $("#QaDeploy").text(sum.QaDeploy);
+            $("#DevReview").text(sum.DevReview);
+            $("#Development").text(sum.Development);
+            $("#MoreInfo").text(sum.MoreInfo);
+            $("#ReadyForDev").text(sum.ReadyForDev);
+            $("#Count").text(sum.Count);
+            let sum2 = sum.QaPassed + sum.QaTesting + sum.QaDeploy + sum.DevReview + sum.Development + sum.ReadyForDev;
+            $("#Count2").text(sum2);
+
+            $table.clear().rows.add(lstRows).draw();
+            console.log(lstRows);
+        });
+
+        function assemble(arr, parentId = '', result = []) {
+            arr.forEach(el => {
+                if (el.ParentId === parentId) {
+                    result.push(el);
+                    assemble(arr, el.Id, result);
+                }
+            })
+            return result;
+        }
+
+        $("html").css("overflow-y", "hidden");
+        renderTable();
+        getData().then((lst) => {
+            lstTable = lst;
+            let sum = getSummary(lst);
+            $("#QaPassed").text(sum.QaPassed);
+            $("#QaTesting").text(sum.QaTesting);
+            $("#QaFailed").text(sum.QaFailed);
+            $("#QaDeploy").text(sum.QaDeploy);
+            $("#DevReview").text(sum.DevReview);
+            $("#Development").text(sum.Development);
+            $("#MoreInfo").text(sum.MoreInfo);
+            $("#ReadyForDev").text(sum.ReadyForDev);
+            $("#Count").text(sum.Count);
+            let sum2 = sum.QaPassed + sum.QaTesting + sum.QaDeploy + sum.DevReview + sum.Development + sum.ReadyForDev;
+            $("#Count2").text(sum2);
+
+            $table.clear().rows.add(lst).draw();
+            $(".table").removeClass("invisible").addClass("visible");
+            $(".state").removeClass("visible").addClass("invisible").hide();
+            $(".tt").tooltip();
+            $("body").resize()
+        });
+    });
+</script>
+<div class="card-box widget  vh90">
+    <div class="row">
+        <div class="col-md-5">
+            @*<a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>*@
+        </div>
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/currentrelease" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div id="" class="row">
+        <div class="col-md-12">
+            <form class="form-inline table invisible" role="form">
+                <div class="form-group m-l-5 m-t-5">
+                    <select id="ddlRelease" class="form-control">
+                        <option value="">Release</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    <table class="table table-bordered table-sm">
+        <thead class="thead-dark">
+            <tr>
+                <th>Total</th>
+                <th>QA Passed</th>
+                <th>QA Testing</th>
+                <th>QA Failed*</th>
+                <th>Waiting QA Deploy</th>
+                <th>Dev Review</th>
+                <th>Development</th>
+                <th>More Info*</th>
+                <th>Ready for Dev</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td id="Count"></td>
+                <td id="QaPassed"></td>
+                <td id="QaTesting"></td>
+                <td id="QaFailed"></td>
+                <td id="QaDeploy"></td>
+                <td id="DevReview"></td>
+                <td id="Development"></td>
+                <td id="MoreInfo"></td>
+                <td id="ReadyForDev"></td>
+                <td id="Count2"></td>
+            </tr>
+        </tbody>
+    </table>
+    <table id="pr-report" class="display table table-bordered dataTable no-footer compact nowrap" width="100%"></table>
+</div>

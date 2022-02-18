@@ -1,0 +1,189 @@
+﻿@{
+    ViewData["Title"] = "Active Pull Request";
+}
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+
+    let $table;
+    const evote = [];
+    evote[10] = { text: "Aproved", className: "success" };
+    evote[5] = { text: "Aproved*", className: "success" };
+    evote[0] = { text: "No vote", className: "warning" };
+    evote[-5] = { text: "Waiting for author", className: "warning" };
+    evote[-10] = { text: "Rejected", className: "danger" };
+
+    function solve(lstPR, resolve) {
+        for (let pr of lstPR.value) {
+            for (let wi of pr.workItem) {
+                if (wi.fields === undefined)
+                    return;
+            }
+        }
+        resolve(lstPR.value);
+    }
+
+    function getData() {
+        return new Promise((resolve, reject) => {
+            fetch(`${gitBaseUrl}pullrequests`)
+                .then((lstPR) => {
+                    for (let pr of lstPR.value) {
+                        fetch(`${gitBaseUrl}repositories/${pr.repository.id}/pullRequests/${pr.pullRequestId}/workitems`)
+                            .then((lstWI) => {
+                                pr.workItem = [];
+                                if (lstWI !== undefined) {
+                                    pr.workItem = lstWI.value;
+                                    for (let widet of pr.workItem) {
+                                        fetch(`${widet.url}`)
+                                            .then((wiDetail) => {
+                                                widet.fields = wiDetail.fields !== undefined ? wiDetail.fields : {};
+                                                solve(lstPR, resolve);
+                                            });
+                                    }
+                                }
+                                else
+                                    solve(lstPR, resolve);
+                            });
+                    }
+                });
+        });
+    }
+
+    function formatData(lstPR) {
+        let data = [];
+
+        for (let p = 0; p < lstPR.length; p++) {
+            let row = {};
+            row.pullRequestId = lstPR[p].pullRequestId;
+            row.createdBy = lstPR[p].createdBy.displayName;
+            row.title = lstPR[p].title;
+            row.branch = lstPR[p].targetRefName;
+            row.createdAt = lstPR[p].creationDate;
+
+            row.reviewers = [];
+            for (let r of lstPR[p].reviewers) {
+                let rev = {};
+                rev.displayName = r.displayName;
+                rev.vote = r.vote;
+                row.reviewers.push(rev);
+            }
+
+            for (let w = 0; w < lstPR[p].workItem.length; w++) {
+                let aux = Object.assign({}, row);
+                aux.workItemId = lstPR[p].workItem[w].id;
+                aux.requestedReleaseDate = lstPR[p].workItem[w].fields['Custom.RequestedReleaseDate'];
+                aux.targetedReleaseDate = lstPR[p].workItem[w].fields['Custom.TargetedReleaseDate'];
+                aux.confirmedReleaseDate = lstPR[p].workItem[w].fields['Custom.ConfirmedReleaseDate'];
+                aux.releaseDate = lstPR[p].workItem[w].fields['Custom.ReleaseDate'];
+                aux.iterationPath = lstPR[p].workItem[w].fields['System.IterationPath'];
+                aux.workItemTitle = lstPR[p].workItem[w].fields['System.Title'];
+                aux.workItemDueDate = lstPR[p].workItem[w].fields['Microsoft.VSTS.Scheduling.DueDate'];
+                aux.repo = lstPR[p].repository.name;
+                data.push(aux);
+            }
+        }
+
+        return data;
+    }
+
+    function renderTable() {
+        $table = $("#pr-report").DataTable({
+            pageLength: 100,
+            dom: 'Bfrtip',
+            order: [[9, "desc"]],
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'PullRequest',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11]
+                },
+            }],
+            columns: [
+                { title: "PR Id", data: "pullRequestId", responsivePriority: 1, render: function (value, meta, row) { return formatLink(`${prBaseUrl}${row.repo}/pullrequest/${value}`, value); } },
+                { title: "Target Branch", data: "branch", responsivePriority: 4, render: function (value) { return value.substring(value.lastIndexOf('/'), value.length) } },
+                { title: "Created By", data: "createdBy", responsivePriority: 11 },
+                { title: "PR Title", data: "title", responsivePriority: 3, width: "25%" },
+                { title: "WI Id", data: "workItemId", responsivePriority: 6, render: function (value) { return formatLink(wiBaseUrl+value, value); } },
+                { title: "WI Title", data: "workItemTitle", responsivePriority: 7, width: "25%" },
+                { title: "Requested Release", data: "requestedReleaseDate", responsivePriority: 8, className: "dt-body-center", render: function (value) { return formatDate(value); } },
+                { title: "Targeted Release", data: "targetedReleaseDate", responsivePriority: 9, className: "dt-body-center", render: function (value) { return formatDate(value); } },
+                { title: "Confirmed Release", data: "confirmedReleaseDate", responsivePriority: 10, className: "dt-body-center", render: function (value) { return formatDate(value); } },
+                { title: "Release Date", data: "releaseDate", responsivePriority: 5, className: "dt-body-center", render: function (value) { return formatDate(value); } },
+                {
+                    title: "Reviewer info", data: "reviewers", responsivePriority: 2, orderable: false, render: function (value) {
+                        let html = '';
+                        for (let r of value)
+                            html += `<span class="tt span-badge badge badge-${evote[r.vote].className} min-100" data-toggle="tooltip" data-placement="left" title="${evote[r.vote].text}">${r.displayName}</span> `;
+                        html += `</div>`;
+                        return html;
+                    }
+                },
+                {
+                    title: "Reviewer info", data: "reviewers", visible: false, render: function (value) {
+                        let html = '';
+                        for (let r of value)
+                            html += ` | ${r.displayName} [${evote[r.vote].text}]`;
+                        html = html.length > 3 ? html.substring(3) : html;
+                        return html;
+                    }
+                },
+            ],
+        });
+    }
+
+    $(document).ready(function () {
+        customize();
+        $(".filter").change(function () {
+            $table.column($(this).attr("filter-index")).search(this.value).draw();
+        });
+        renderTable();
+        getData().then((lstPR) => {
+            $table.clear().rows.add(formatData(lstPR)).draw();
+            $(".branch").val("master").change();
+            $(".table").removeClass("invisible").addClass("visible");
+            $(".state").removeClass("visible").addClass("invisible").hide();
+            $(".tt").tooltip();
+            $("body").resize();
+        });
+
+    });
+</script>
+<div class="card-box widget">
+    <div class="row">
+        <div class="col-md-5">
+            <a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>
+        </div>
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/active" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div id="collapse" class="row collapse">
+        <div class="col-md-12">
+            <form class="form-inline table invisible" role="form">
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="branch form-control filter input-sm" filter-index="1" placeholder="Branch">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm" filter-index="6" placeholder="Requested release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm" filter-index="7" placeholder="Targeted release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm" filter-index="8" placeholder="Confirmed release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="release-date form-control filter input-sm" filter-index="9" placeholder="Release date">
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 table invisible ">
+            <table id="pr-report" class="display table table-striped table-bordered dataTable no-footer responsive compact" width="100%"></table>
+        </div>
+    </div>
+</div>

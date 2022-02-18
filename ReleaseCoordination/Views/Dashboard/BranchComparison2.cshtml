@@ -1,0 +1,376 @@
+﻿@{
+    ViewData["Title"] = "Branch Comparison - Lite";
+}
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+    const topIndex = @ViewBag.TopIndex;
+    const topComment = '@ViewBag.TopComment';
+
+    let $table1;
+    let $table2;
+    let lstBranch1 = [];
+    let lstBranch2 = [];
+    let lstDiffBranch1 = [];
+    let lstDiffBranch2 = [];
+    let lstBranches = [];
+    let st_lstPR = [];
+
+    let p1 = "";
+    let p2 = "";
+    let params = window.location.search.substr(1);
+    if (params.length > 0) {
+        p1 = params.split('&')[0].substring(3);
+        p2 = params.split('&')[1].substring(3);
+    }
+
+    async function getBranches() {
+        return new Promise((resolve, reject) => {
+            fetch(branchBaseUrl)
+                .then((lst) => {
+
+                    lst.value.forEach(branch => {
+                        let exclude = ["master", "qa1", "qa2", "release", "e2e01", "demo"]
+                        let name = branch.name;
+
+                        if (name.substring(0, 11) == "refs/heads/")
+                            name = branch.name.substring(11);
+                        else if (name.substring(0, 10) == "refs/tags/")
+                            name = branch.name.substring(10);
+
+                        if (exclude.indexOf(name) == -1) {
+                            $("#targetBranch1").append(new Option(name, name));
+                            $("#targetBranch2").append(new Option(name, name));
+                        }
+                    });
+                    lstBranches = lst;
+                    resolve(lst);
+                });
+        });
+    }
+
+    async function getBranchCommits(branch, top, text) {
+        let lstResp = await getCommits(branch, top);
+        let i = lstResp.findIndex(x => x.comment === text);
+
+        lstResp = lstResp.slice(0, i + 1);
+
+        lstResp.map(function (item) {
+            if (item.comment.substring(0, 10) == "Merged PR ")
+                item.pullRequestId = item.comment.substring(10, item.comment.indexOf(":"));
+            item.repository = { id: repoId };
+        });
+
+        st_lstPR = await getWorkItems(lstResp.slice(0, 200));
+
+        return lstResp;
+    }
+
+    async function getWorkItems (lstPR)  {
+        return new Promise((resolve, reject) => {
+            let s = lstPR.length - 1;
+            for (let pr of lstPR) {
+
+                if (pr.pullRequestId === undefined) {
+                    if ((s--) == 0)
+                        getWorkItemsDetail(lstPR, resolve);
+                }
+
+                let storedPR = st_lstPR.filter(p => p.pullRequestId == pr.pullRequestId);
+                if (storedPR.length > 0) {
+                    pr.lstWI = storedPR[0].lstWI;
+                    pr.lstWIDetail = storedPR[0].lstWIDetail;
+                    if ((s--) == 0)
+                        getWorkItemsDetail(lstPR, resolve);
+                }
+                else {
+                    PullRequest.getWorkItems([pr]).then((lstx) => {
+                        if ((s--) == 0)
+                            getWorkItemsDetail(lstPR, resolve)
+
+                    });
+                }
+            }
+        });
+    }
+
+    async function getWorkItemsDetail(lstPR, resolve) {
+        let lstWIId = [];
+        lstPR.map(function (item) {
+            if (item.lstWIDetail === undefined && item.lstWI !== undefined && item.lstWI !== null)
+                lstWIId = [...lstWIId, ...item.lstWI];
+        });
+
+        let lstWIDetail = await WorkItem.getDetail(lstWIId);
+        lstPR.map(function (item) {
+            if (item.lstWIDetail === undefined && lstWIDetail !== undefined && item.lstWI !== undefined)
+                item.lstWIDetail = lstWIDetail.value.filter(x => item.lstWI.indexOf(x.id) > -1);
+        });
+
+        resolve(lstPR);
+    }
+
+    async function getCommits(branch, top) {
+        return new Promise((resolve, reject) => {
+            fetch(`${gitBaseUrl}repositories/${repoId}/commits?searchCriteria.itemVersion.version=${branch}&searchCriteria.$skip=${0}&searchCriteria.$top=${top}&searchCriteria.showOldestCommitsFirst=true&api-version=6.0`)
+                .then((lst) => {
+                    resolve(lst.value);
+                });
+        });
+    }
+
+    function renderTable(branch, data) {
+        $(branch).DataTable({
+            pageLength: 500,
+            data: data,
+            dom: 'Bfrtip',
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'Branch',
+                exportOptions: {
+                    columns: [0, 8, 9, 1, 7, 6, 4, 3]
+                },
+            }],
+            ordering: false,
+            select: true,
+            rowId: 'CommitId',
+            columns: [
+                { title: "Commit Id", data: "commitId", responsivePriority: 1, render: function (value) { return value.substring(0, 8); } },
+                {
+                    title: "PR", data: "pullRequestId", defaultContent: "", responsivePriority: 3,
+                    render: function (value, meta, row) { return formatLink(`${prBaseUrl}${repoId}/pullrequest/${value}`, value); }
+                },
+                {
+                    title: "WI", data: "lstWIDetail", defaultContent: "", responsivePriority: 4,
+                    render: function (value) {
+                        if (value === undefined)
+                            return '';
+
+                        let id = "";
+                        if (value[0] !== undefined && value[0].id !== undefined)
+                            id = value[0].id;
+
+                        if (value.length > 1)
+                            return formatLink(wiBaseUrl + id, id + "...");
+                        else
+                            return formatLink(wiBaseUrl + id, id);
+                    }
+                },
+                {
+                    title: "State", data: "lstWIDetail", defaultContent: "", responsivePriority: 6,
+                    render: function (value) {
+                        let html = "";
+                        if (value !== undefined) {
+                            html = value.map(function (wi) {
+                                if (wi.fields !== undefined)
+                                    return wi.fields["System.State"];
+                            });
+                        }
+                        return html.toString();
+                    }
+                },
+                //{
+                //    title: "Release Date", data: "lstWIDetail", defaultContent: "", responsivePriority: 5,
+                //    render: function (value) {
+                //        let html = "";
+                //        if (value !== undefined) {
+                //            html = value.map(function (wi) {
+                //                if (wi.fields !== undefined && wi.fields["Custom.ReleaseDate"] !== undefined)
+                //                    return moment(wi.fields["Custom.ReleaseDate"]).format("MM/DD/YYYY");
+                //            });
+                //        }
+                //        return html.toString();
+                //    }
+                //},
+                {
+                    title: "Targeted Release Date", data: "lstWIDetail", defaultContent: "", responsivePriority: 5,
+                    render: function (value) {
+                        let html = "";
+                        if (value !== undefined) {
+                            html = value.map(function (wi) {
+                                if (wi.fields !== undefined && wi.fields["Custom.TargetedReleaseDate"] !== undefined)
+                                    return moment(wi.fields["Custom.TargetedReleaseDate"]).format("MM/DD/YYYY");
+                            });
+                        }
+                        return html.toString();
+                    }
+                },
+                { title: "Comment", data: "comment", responsivePriority: 2, render: function (value) { return value.length > 50 ? value.substring(0, 50) + "..." : value } },
+                { title: "Comment Complete", data: "comment", responsivePriority: 10001 },
+                {
+                    title: "WI Complete", data: "lstWI", defaultContent: "", responsivePriority: 10001,
+                    render: function (value) {
+                        let html = '';
+                        if (value !== undefined) {
+                            value.map(function (wi) {
+                                html += ' ' + formatLink(wiBaseUrl + wi, wi);
+                            });
+                        }
+                        return html;
+                    }
+                },
+                { title: "Date", data: "author.date", className: "dt-body-center", type: 'date', responsivePriority: 4, render: function (value) { return formatDatetime(value); } },
+                { title: "Author", data: "author.name", className: "dt-body-center", responsivePriority: 5 },
+            ],
+            "createdRow": function (row, data, dataIndex) {
+                let test;
+                if (branch == "#branch1")
+                    test = lstDiffBranch1.filter(commit => commit.comment == data.comment);
+                else if (branch == "#branch2")
+                    test = lstDiffBranch2.filter(commit => commit.comment == data.comment);
+                if (test.length > 0)
+                    $(row).addClass("cWarning");
+            }
+        });
+    }
+
+    function searchDifferences() {
+        lstDiffBranch1 = [];
+        lstDiffBranch2 = [];
+
+        lstBranch1.forEach(commit1 => {
+            let test = lstBranch2.filter(commit2 => commit2.comment == commit1.comment);
+            if (test.length == 0)
+                lstDiffBranch1.push(commit1);
+        });
+
+        lstBranch2.forEach(commit2 => {
+            let test = lstBranch1.filter(commit1 => commit1.comment == commit2.comment);
+            if (test.length == 0)
+                lstDiffBranch2.push(commit2);
+        });
+    }
+
+    $(document).ready(function () {
+        renderTable("#branch1");
+        renderTable("#branch2");
+
+        customize();
+        getBranches();
+
+        let filter = {};
+        $(".filter").change(async function () {
+            $(".table").removeClass("visible").addClass("invisible");
+
+            $("#branch1").DataTable().destroy();
+            $("#branch2").DataTable().destroy();
+
+            filter.targetBranch1 = $("#targetBranch1").val();
+            filter.targetBranch2 = $("#targetBranch2").val();
+            filter.b1onlychanges = $("#onlyChangesBranch1").is(":checked");
+            filter.b2onlychanges = $("#onlyChangesBranch2").is(":checked");
+
+            window.history.pushState(null, null, `/dashboard/branchcomparison2?b1=${filter.targetBranch1}&b2=${filter.targetBranch2}`);
+
+            if ($(this).hasClass("check")) {
+
+                if (filter.b1onlychanges)
+                    renderTable("#branch1", lstDiffBranch1)
+                else
+                    renderTable("#branch1", lstBranch1)
+
+                if (filter.b2onlychanges)
+                    renderTable("#branch2", lstDiffBranch2)
+                else
+                    renderTable("#branch2", lstBranch2)
+            }
+            else {
+                $(".state").removeClass("invisible").addClass("visible").show();
+
+                if (filter.targetBranch1 != '' && filter.targetBranch2 != '') {
+
+                    lstBranch1 = await getBranchCommits(filter.targetBranch1, topIndex, topComment);
+                    lstBranch2 = await getBranchCommits(filter.targetBranch2, topIndex, topComment);
+
+                    searchDifferences();
+
+                    if (filter.b1onlychanges)
+                        renderTable("#branch1", lstDiffBranch1)
+                    else
+                        renderTable("#branch1", lstBranch1)
+                    if (filter.b2onlychanges)
+                        renderTable("#branch2", lstDiffBranch2)
+                    else
+                        renderTable("#branch2", lstBranch2)
+                }
+            }
+
+            $(".table").removeClass("invisible").addClass("visible");
+            $(".state").removeClass("visible").addClass("invisible").hide();
+        });
+
+        $(".table").removeClass("invisible").addClass("visible");
+        $(".state").removeClass("visible").addClass("invisible").hide();
+        $(".tt").tooltip();
+        $("body").resize();
+
+        $("#targetBranch1").val(p1).change();
+        $("#targetBranch2").val(p2).change();
+
+    });
+
+</script>
+<div class="card-box widget">
+    <div class="row">
+        <div class="col-md-5">
+            @*<a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>*@
+        </div>
+
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/branchcomparison" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+            <form class="form-inline m-b-20" role="form">
+                <div class="form-group">
+                    <select id="targetBranch1" class="form-control filter max-w-250">
+                        <option value="">Branch</option>
+                        <option value="master">master</option>
+                        <option value="qa2">qa2</option>
+                        <option value="release">release</option>
+                        <option value="e2e01">e2e01</option>
+                        <option value="demo">demo</option>
+                    </select>
+                </div>
+                <div class="form-group m-l-10">
+                    <div class="checkbox checkbox-primary">
+                        <input id="onlyChangesBranch1" type="checkbox" class="filter check">
+                        <label for="onlyChangesBranch1">
+                            Only differences
+                        </label>
+                    </div>
+                </div>
+            </form>
+            <table id="branch1" class="display table table-bordered dataTable no-footer compact responsive nowrap" width="100%"></table>
+        </div>
+
+        <div class="card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+            <form class="form-inline m-b-20" role="form">
+                <div class="form-group">
+                    <select id="targetBranch2" class="form-control filter max-w-250">
+                        <option value="">Branch</option>
+                        <option value="master">master</option>
+                        <option value="qa2">qa2</option>
+                        <option value="release">release</option>
+                        <option value="e2e01">e2e01</option>
+                        <option value="demo">demo</option>
+                    </select>
+                </div>
+                <div class="form-group m-l-10">
+                    <div class="checkbox checkbox-primary">
+                        <input id="onlyChangesBranch2" type="checkbox" class="filter check">
+                        <label for="onlyChangesBranch2">
+                            Only differences
+                        </label>
+                    </div>
+                </div>
+            </form>
+            <table id="branch2" class="display table table-bordered dataTable no-footer compact responsive nowrap" width="100%"></table>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,263 @@
+﻿@{
+    ViewData["Title"] = "Counter Pull Request";
+}
+
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+    const currentRelease = moment('@ViewBag.CurrentRelease').format('MM/D/YYYY');
+    const isOffCycle = ('@ViewBag.IsOffCycle' === 'True');
+
+    let $table;
+    var collapsedGroups = {};
+    let lstTeamMembers = [];
+    let lstPRG = [];
+
+    function getMembersTeam(lstPR) {
+        return new Promise((resolve, reject) => {
+            fetch(`${teamBaseUrl}`)
+                .then((lst) => {
+                    let lstRes = [];
+                    for (let mem of lst.value)
+                        lstRes.push(mem.identity.displayName);
+
+                    resolve(lstRes);
+                });
+        });
+    }
+
+    function getPullRequest() {
+        return new Promise((resolve, reject) => {
+            let data = [];
+            fetch(`${gitBaseUrl}pullrequests`)
+                .then((lstPR) => {
+                    let s = lstPR.value.length - 1;
+                    for (let pr of lstPR.value) {
+                        fetch(`${gitBaseUrl}repositories/${pr.repository.id}/pullRequests/${pr.pullRequestId}/workitems`)
+                            .then((lstWI) => {
+                                for (let rev of pr.reviewers) {
+                                    let row = {};
+                                    row.reviewer = rev.displayName;
+                                    row.pullRequestId = pr.pullRequestId;
+                                    row.title = pr.title;
+                                    row.createdBy = pr.createdBy.displayName;
+                                    row.repo = pr.repository.name;
+                                    row.creationDate = pr.creationDate;
+                                    if (lstWI !== undefined && lstWI.value[0] !== undefined)
+                                        row.workItemId = lstWI.value[0].id;
+
+                                    data.push(row);
+                                }
+                                if ((s--) == 0)
+                                    resolve(data);
+                            });
+                    }
+                });
+        });
+    }
+
+    function getPullRequestWorkItems(lstPR) {
+        return new Promise((resolve, reject) => {
+            let workItemsId = [];
+            lstPR.forEach(pr => {
+                if (pr.workItemId !== undefined)
+                    workItemsId.push(pr.workItemId);
+            });
+
+            let n = Math.ceil(workItemsId.length / 200) - 1;
+            while (workItemsId.length > 0) {
+                fetch(`${witBaseUrl}&ids=${workItemsId.splice(0, 200).toString()}`).then((lstWI) => {
+                    lstPR.forEach(pr => {
+                        let lstWIF = lstWI.value.filter(wi => wi.id == pr.workItemId);
+                        if (lstWIF.length > 0) {
+                            pr.iterationPath = lstWIF[0].fields["System.IterationPath"];
+                            pr.requestedReleaseDate = lstWIF[0].fields["Custom.RequestedReleaseDate"];
+                            pr.targetedReleaseDate = lstWIF[0].fields["Custom.TargetedReleaseDate"];
+                            pr.confirmedReleaseDate = lstWIF[0].fields["Custom.ConfirmedReleaseDate"];
+                            pr.releaseDate = lstWIF[0].fields["Custom.ReleaseDate"];
+                            pr.workItemTitle = lstWIF[0].fields["System.Title"];
+                            pr.workItemState = lstWIF[0].fields["System.State"];
+                        }
+                    });
+
+                    if ((n--) === 0)
+                        resolve(lstPR);
+                });
+            }
+        });
+    }
+
+    function renderTable() {
+        $table = $("#pr-report").DataTable({
+            pageLength: 100,
+            dom: 'frtip',
+            columns: [
+                { title: "Reviewer", data: "reviewer", width: "20%" },
+                { title: "Created by", data: "createdBy", defaultContent: '', orderable: false, width: "20%" },
+                //{ title: "Created", data: "creationDate", defaultContent: '', orderable: false, render: function (value) { return value == null ? '' : moment(value).format('MM/D/YYYY'); } },
+                { title: "Requested Release", data: "requestedReleaseDate", render: function (value) { return value == null ? '' : moment(value).format('MM/D/YYYY'); } },
+                { title: "Targeted Release", data: "targetedReleaseDate", render: function (value) { return value == null ? '' : moment(value).format('MM/D/YYYY'); } },
+                { title: "Confirmed Release", data: "confirmedReleaseDate", render: function (value) { return value == null ? '' : moment(value).format('MM/D/YYYY'); } },
+                { title: "Release Date", data: "releaseDate", render: function (value) { return value == null ? '' : moment(value).format('MM/D/YYYY'); } },
+                {
+                    title: "PR Id", data: "pullRequestId", defaultContent: '', orderable: false,
+                    render: function (value, meta, row) {
+                        return value == null ? '' : `<a href='${prBaseUrl}${row.repo}/pullrequest/${value}' target='_blank'> ${value} </a>`
+                    }
+                },
+                { title: "PR Title", data: "title", defaultContent: '', orderable: false, width: "50%" },
+            ],
+            rowGroup: {
+                dataSrc: 'reviewer',
+                startRender: function (rows, group) {
+                    var collapsed = !!collapsedGroups[group];
+                    rows.nodes().each(function (r) {
+                        r.style.display = collapsed ? 'none' : '';
+                    });
+                    let item = null;
+
+                    if (group.substring(0, 3) === 'zzz') {
+                        item = $('<tr/>')
+                            .append('<td colspan="9">' + group.substring(3, group.length) + ' (0)</td>')
+                            .attr('data-name', group)
+                            .css('cursor', 'pointer')
+                            .toggleClass('collapsed', collapsed);
+                    }
+                    else {
+                        item = $('<tr/>')
+                            .append('<td colspan="9">' + group + ' (' + rows.count() + ')</td>')
+                            .attr('data-name', group)
+                            .css('cursor', 'pointer')
+                            .toggleClass('collapsed', collapsed);
+                    }
+                    return item;
+                }
+            }
+        });
+
+        $('#pr-report tbody').on('click', 'tr.dtrg-start', function () {
+            var name = $(this).data('name');
+            if (name.substring(0, 3) !== "zzz") {
+                collapsedGroups[name] = !collapsedGroups[name];
+                $table.draw(false);
+            }
+        });
+    }
+
+    getPullRequest().then((lstPR) => {
+        getPullRequestWorkItems(lstPR).then((lstPR) => {
+            getMembersTeam().then((lstTeamMembers) => {
+                lstPRG = lstPR;
+                lstTeamMembersG = lstTeamMembers;
+                reloadData();
+                $(".table").removeClass("invisible").addClass("visible");
+                $(".state").removeClass("visible").addClass("invisible").hide();
+            });
+        });
+    });
+
+    function getNoPendingReview(lstPR) {
+        for (let mem of lstTeamMembersG) {
+            let lstPRF = lstPR.filter(pr => pr.reviewer == mem);
+            if (lstPRF.length === 0) {
+                lstPR.push({
+                    createdBy: "",
+                    iterationPath: "",
+                    pullRequestId: -1,
+                    releaseDate: "999",
+                    reviewer: "zzz " + mem,
+                    title: "",
+                    workItemId: "",
+                    workItemState: "",
+                    workItemTitle: ""
+                });
+            }
+        }
+        return lstPR;
+    }
+
+    function reloadData() {
+        let filter = $(".requested-release-date").val();
+        let lstPR = lstPRG.filter(function (pr) {
+            let rd = pr.requestedReleaseDate == undefined ? "" : moment(pr.requestedReleaseDate).format('MM/D/YYYY').toString();
+            return rd.toLowerCase().includes(filter.toLowerCase());
+        });
+
+        filter = $(".targeted-release-date").val();
+        lstPR = lstPR.filter(function (pr) {
+            let rd = pr.targetedReleaseDate == undefined ? "" : moment(pr.targetedReleaseDate).format('MM/D/YYYY').toString();
+            return rd.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+        });
+
+        filter = $(".confirmed-release-date").val();
+        lstPR = lstPR.filter(function (pr) {
+            let rd = pr.confirmedReleaseDate == undefined ? "" : moment(pr.confirmedReleaseDate).format('MM/D/YYYY').toString();
+            return rd.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+        });
+
+        filter = $(".release-date").val();
+        lstPR = lstPR.filter(function (pr) {
+            let rd = pr.requestedReleaseDate == undefined ? "" : moment(pr.releaseDate).format('MM/D/YYYY').toString();
+            return rd.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+        });
+
+        if ($(".pending-review").is(":checked"))
+            lstPR = getNoPendingReview(lstPR);
+
+        collapsed = [...new Set(lstPR.map(item => item.reviewer))];
+        for (let collapse of collapsed)
+            collapsedGroups[collapse] = true;
+        $table.clear().rows.add(lstPR).draw();
+    }
+
+    $(document).ready(function () {
+        customize();
+        renderTable();
+        $(".tt").tooltip();
+        $(".filter").change(function () {
+            reloadData();
+        });
+
+    });
+
+</script>
+<div class="card-box widget">
+    <div class="row">
+        <div class="col-md-5">
+            <a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>
+        </div>
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible tt" href="@(ViewBag.Host)dashboard/counter" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div id="collapse" class="row collapse">
+        <div class="col-md-12">
+            <form class="form-inline table invisible" role="form">
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm requested-release-date" filter-index="7" placeholder="Requested release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm targeted-release-date" filter-index="8" placeholder="Targeted release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="form-control filter input-sm confirmed-release-date" filter-index="9" placeholder="Confirmed release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="text" class="release-date form-control filter input-sm release-date" filter-index="10" placeholder="Release date">
+                </div>
+                <div class="form-group m-l-5 m-t-5">
+                    <input type="checkbox" class="form-check-input filter pending-review">
+                    <label class="form-check-label">No pending review</label>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 table invisible ">
+            <table id="pr-report" class="display table table-striped table-bordered dataTable no-footer responsive compact" width="100%"></table>
+        </div>
+    </div>
+</div>

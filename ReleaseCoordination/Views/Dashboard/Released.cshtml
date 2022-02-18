@@ -1,0 +1,94 @@
+﻿@{
+    ViewData["Title"] = "Released";
+}
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+
+    let $table;
+    let srelease = "";
+    let rclass = "cOdd";
+
+    function getData() {
+        return new Promise((resolve, reject) => {
+            fetchApi(`${apiUrl}`)
+                .then((lst) => {
+                    resolve(lst);
+                });
+        });
+    }
+
+    function renderTable() {
+        $table = $("#pr-report").DataTable({
+            select: true,
+            ordering: false,
+            pageLength: 1000,
+            dom: 'Bfrtip',
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'PullRequest',
+            }],
+            columns: [
+                { title: "Release Date", data: "release.date", responsivePriority: 8, className: "dt-body-center", render: function (value) { return formatDate(value); } },
+                {
+                    title: "WI", data: "workItems", responsivePriority: 1, render: function (value, meta, row) {
+                        let html = '';
+                        if (value !== undefined) {
+                            value.map(function (wi) {
+                                html += ' ' + formatLink(wiBaseUrl + wi.workItemId, wi.workItemId);
+                            });
+                        }
+                        return html;
+                    }
+                },
+                { title: "PR", data: "pullRequest", responsivePriority: 1, render: function (value, meta, row) { return formatLink(`${prBaseUrl}${repoId}/pullrequest/${value}`, value); } },
+                { title: "Comment", data: "comment", responsivePriority: 1, render: function (value) { return value.length > 50 ? value.substring(0, 50) + "..." : value } },
+            ],
+            "createdRow": function (row, data, dataIndex) {
+                
+                
+                if (data.release.name != srelease) {
+                    if (rclass == "cOdd") {
+                        rclass = "";
+                    }
+                    else {
+                        rclass = "cOdd";
+                    }
+                    srelease = data.release.name;
+                }
+
+                $(row).addClass(rclass);
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        customize();
+        renderTable();
+        getData().then((lstPR) => {
+            $table.clear().rows.add(lstPR).draw();
+            $(".table").removeClass("invisible").addClass("visible");
+            $(".state").removeClass("visible").addClass("invisible").hide();
+            $(".tt").tooltip();
+            $("body").resize();
+        });
+    });
+</script>
+<div class="card-box widget">
+    <div class="row">
+        <div class="col-md-5">
+            @*<a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>*@
+        </div>
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/released" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 table invisible ">
+            <table id="pr-report" class="display table table-bordered dataTable no-footer responsive compact" width="100%"></table>
+        </div>
+    </div>
+</div>

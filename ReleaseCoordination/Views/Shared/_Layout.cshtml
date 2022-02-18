@@ -1,0 +1,141 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Release Coordination</title>
+
+    <link href="~/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="/assets/css/icons.css" rel="stylesheet" type="text/css">
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css">
+    <link href="../plugins/datatables/dataTables.bootstrap4.min.css" rel="stylesheet" type="text/css" />
+    <link href="../plugins/datatables/buttons.bootstrap4.min.css" rel="stylesheet" type="text/css" />
+    <link href="../plugins/datatables/responsive.bootstrap4.min.css" rel="stylesheet" type="text/css" />
+    <link href="~/plugins/datatables/rowGroup.dataTables.min.css" rel="stylesheet" />
+    <link href="~/plugins/datatables/select.dataTables.min.css" rel="stylesheet" />
+    <link href="~/plugins/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet" />
+
+    <script src="~/assets/js/jquery.min.js"></script>
+    <script src="~/plugins/jquery-ui/jquery-ui.js"></script>
+    <script src="~/assets/js/popper.min.js"></script>
+    <script src="~/assets/js/bootstrap.min.js"></script>
+    <script src="~/plugins/moment/min/moment.min.js"></script>
+    <script src="../plugins/datatables/jquery.dataTables.min.js"></script>
+    <script src="../plugins/datatables/dataTables.bootstrap4.min.js"></script>
+    <script src="../plugins/datatables/dataTables.buttons.min.js"></script>
+    <script src="~/plugins/datatables/dataTables.rowGroup.min.js"></script>
+    <script src="../plugins/datatables/buttons.bootstrap4.min.js"></script>
+    <script src="../plugins/datatables/jszip.min.js"></script>
+    <script src="../plugins/datatables/buttons.html5.min.js"></script>
+    <script src="../plugins/datatables/dataTables.responsive.min.js"></script>
+    <script src="../plugins/datatables/responsive.bootstrap4.min.js"></script>
+    <script src="~/plugins/datatables/dataTables.select.min.js"></script>
+    <script src="~/plugins/datatables/datetime.js"></script>
+    <script src="~/assets/js/detect.js"></script>
+    <script src="~/assets/js/fastclick.js"></script>
+    <script src="~/assets/js/jquery.slimscroll.js"></script>
+    <script src="~/assets/js/jquery.blockUI.js"></script>
+    <script src="~/assets/js/waves.js"></script>
+    <script src="~/assets/js/wow.min.js"></script>
+    <script src="~/assets/js/jquery.nicescroll.js"></script>
+    <script src="~/assets/js/jquery.scrollTo.min.js"></script>
+    <script src="~/plugins/jquery.steps/js/jquery.steps.min.js"></script>
+    <script src="~/plugins/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="~/assets/js/jquery.core.js"></script>
+    <script src="~/assets/js/jquery.app.js"></script>
+
+    <script>
+        let PAT = '@Configuration.GetSection("AppSettings")["PAT"]';
+        let OrganizationName = '@Configuration.GetSection("AppSettings")["OrganizationName"]';
+        let ProjectName = '@Configuration.GetSection("AppSettings")["ProjectName"]';
+        let RepoId = '@Configuration.GetSection("AppSettings")["RepoId"]';
+        let CommitURL = '@Configuration.GetSection("AppSettings")["CommitURL"]';
+        let TeamURL = '@Configuration.GetSection("AppSettings")["TeamURL"]';
+        let ApiUrl = '@Configuration.GetSection("AppSettings")["ApiURL"]';
+        let ApiCredential = '@Configuration.GetSection("AppSettings")["ApiCredential"]';
+    </script>
+
+    <script src="~/js/DevOpsBase.js"></script>
+    <script src="~/js/PullRequest.js"></script>
+    <script src="~/js/WorkItem.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3XW027JK8X"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-3XW027JK8X');
+    </script>
+    <script>
+        var resizefunc = [];
+    </script>
+</head>
+<body>
+    <header>
+        <nav class="mn-navbar navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MegaIntake Release</a>
+                @*<button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>*@
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="released">Released</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Releases
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="FebruaryEpic">February 2.0</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="February">February</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="January">January</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="December">December</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="november">November</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="october">October</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="september">September</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="august">August</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="release" asp-action="july">July</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Branch Comparison
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" asp-area="" asp-controller="dashboard" asp-action="branchcomparison">Branch Comparison</a>
+                                <a class="dropdown-item" asp-area="" asp-controller="dashboard" asp-action="branchcomparison2">Branch Comparison - Lite</a>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="active">Active</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="completed">Completed</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="counter">Counter</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="content-page">
+        <div class="content">
+            @RenderBody()
+            @*<footer class="footer">
+                    2016 - 2017 © Minton <span class="hide-phone">- Coderthemes.com</span>
+                </footer>*@
+        </div>
+    </div>
+</body>
+</html>
