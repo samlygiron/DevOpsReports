@@ -1,0 +1,428 @@
+﻿@{
+    ViewData["Title"] = "Release - November";
+}
+
+<script>
+    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/cb5f3152-7758-4e7b-83d5-e3b7bf128170/?api-version=6.0`;
+
+    const releases = ['11/05', '11/19'];
+
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+    const type = [];
+    type["Bug"] = { icon: "bug", className: "cBug" };
+    type["Task"] = { icon: "sticky-note", className: "cTask" };
+    type["UserStory"] = { icon: "leanpub", className: "cUserStory" };
+    type["Feature"] = { icon: "trophy", className: "cFeature" };
+
+    const badge = [];
+    badge["completed"] = "success";
+    badge["active"] = "warning";
+
+    let $table;
+    let lstTable;
+
+    async function getData() {
+        let lstQryRes = await fetch(`${releaseReportURl}`);
+        let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
+        let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
+
+        lstWI = lstWI.value;
+
+        let lstPR = await PullRequest.getPullRequestList(250);
+        await PullRequest.getWorkItems(lstPR);
+
+        //QRY result
+        let lstRows = lstWI.map(function (item) {
+            let lstPRF = lstPR.filter(pr => pr.lstWI.filter(it => it == item.id).length > 0);
+            item.PR = lstPRF.length === 0 ? [] : lstPRF;
+            return wiMapper(item);
+        });
+
+        //Clean US
+        let lstRowsClean = lstRows.filter(function (row) {
+            let releaseDate = row.ReleaseDate === undefined ? '-1' : moment(row.ReleaseDate).format("MM/DD").toString();
+            if (row.Type === 'User Story' && releases.indexOf(releaseDate) === -1) {
+                let hasChilds = lstRows.filter(wi => wi.ParentId == row.Id).length;
+                if (hasChilds > 0)
+                    return row;
+            }
+            else return row;
+        });
+
+        //Clean Features
+        lstRowsClean = lstRowsClean.filter(function (row) {
+            let releaseDate = row.ReleaseDate === undefined ? '-1' : moment(row.ReleaseDate).format("MM/DD").toString();
+            if (row.Type === 'Feature' && releases.indexOf(releaseDate) === -1) {
+                let hasChilds = lstRowsClean.filter(wi => wi.ParentId == row.Id).length;
+                if (hasChilds > 0)
+                    return row;
+            }
+            else return row;
+        });
+
+        return lstRowsClean;
+    }
+
+    function getSummary(lstRows) {
+        let summary = {
+            QaPassed: 0,
+            QaTesting: 0,
+            QaFailed: 0,
+            QaDeploy: 0,
+            DevReview: 0,
+            Development: 0,
+            MoreInfo: 0,
+            ReadyForDev: 0,
+            Count: 0
+        }
+
+        lstRows.map(function (row) {
+            if (row.Type == "Task" || row.Type == "Bug") {
+                summary.Count++;
+                if (row.State == "QA Passed" || row.State == "Resolved")
+                    summary.QaPassed++;
+                if (row.State == "QA" || row.State == "QA Failed")
+                    summary.QaTesting++;
+                if (row.State == "QA Failed")
+                    summary.QaFailed++;
+                if (row.State == "Waiting QA Deployment")
+                    summary.QaDeploy++;
+                if (row.State == "Dev Review")
+                    summary.DevReview++;
+                if (row.State == "Active" || row.State == "More Info" || row.State == "Development")
+                    summary.Development++;
+                if (row.State == "More Info")
+                    summary.MoreInfo++;
+                if (row.State == "Ready for Dev" || row.State == "New")
+                    summary.ReadyForDev++;
+            }
+        });
+
+        return summary;
+    }
+
+    function wiMapper(item) {
+        return {
+            Id: item.id,
+            PR: item.PR,
+            Title: item.fields['System.Title'],
+            State: item.fields['System.State'],
+            Type: item.fields['System.WorkItemType'],
+            //ReleaseDate: item.fields['Custom.ReleaseDate'],
+            ParentId: (item.fields['System.Parent'] === undefined || item.fields['System.Parent'] === 71339 || item.fields['System.Parent'] ===  93943 ) ? '' : (item.fields['System.WorkItemType'] === 'Feature') ? '' : item.fields['System.Parent'],
+            ClientandBusinessCommitted: item.fields['Custom.ClientandBusinessCommitted'],
+            Priority: item.fields['Microsoft.VSTS.Common.Priority'],
+            Risk: item.fields['Microsoft.VSTS.Common.Risk'],
+            Severity: item.fields['Microsoft.VSTS.Common.Severity'],
+            WorkItemType: item.fields['System.WorkItemType'],
+            InternationalDevOpsID: item.fields['Custom.InternationalDevOpsID'],
+            State: item.fields['System.State'],
+            Tags: item.fields['System.Tags'],
+            Title: item.fields['System.Title'],
+            ReleaseDate: item.fields['Custom.TargetedReleaseDate'],
+            ProjectManager: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].uniqueName,
+            IterationPath: item.fields['System.IterationPath'],
+            AssignedTo: item.fields['System.AssignedTo'] === undefined ? '' : item.fields['System.AssignedTo'].uniqueName,
+            LOE: item.fields['Custom.LOE'],
+            DevStartDate: item.fields['Custom.DevStartDate'],
+            DevEndDate: item.fields['Custom.DevEndDate'],
+            DevPctComplete: item.fields['Custom.DevPctComplete'],
+            OriginalEstimate: item.fields['Microsoft.VSTS.Scheduling.OriginalEstimate'],
+            RemainingWork: item.fields['Microsoft.VSTS.Scheduling.RemainingWork'],
+            CompletedWork: item.fields['Microsoft.VSTS.Scheduling.CompletedWork'],
+            DueDate: item.fields['Microsoft.VSTS.Scheduling.DueDate'],
+            ConfigChanges: item.fields['Custom.ConfigChanges'],
+            QAResource: item.fields['Custom.QAResource'] === undefined ? '' : item.fields['Custom.QAResource'].uniqueName,
+            StartDate: item.fields['Microsoft.VSTS.Scheduling.StartDate'],
+            EndDate: item.fields['Custom.EndDate'],
+            QALOE: item.fields['Custom.QALOE'],
+            QAActualHours: item.fields['Custom.QAActualHours']
+        };
+    }
+
+    function filterRelease(releaseDate) {
+        let lstRows = lstTable;
+
+        if (releaseDate !== "") {
+            let lstTask = null;
+            lstTask = lstTable.filter(row => (row.Type == "Task" || row.Type == "Bug") && row.ReleaseDate !== undefined && (moment(row.ReleaseDate).local().format("MM/DD").toString() == releaseDate));
+          
+            let lstUS = [];
+            lstTask.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature") && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstUS.filter(row => row.Id == item.Id).length;
+                    if (test == 0)
+                        lstUS.push(item);
+                })
+            });
+
+            let lstFeature = [];
+            lstUS.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature") && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstFeature.filter(row => row.Id == item.Id).length;
+                    if (test == 0)
+                        lstFeature.push(item);
+                })
+            });
+
+            lstRows = [...lstTask, ...lstUS, ...lstFeature];
+            lstRows = [...new Set(lstRows)];
+            lstRows = assemble(lstRows);
+        }
+
+        return lstRows;
+    }
+
+    function assemble(arr, parentId = '', result = []) {
+        arr.forEach(el => {
+            console.log(el);
+
+            if (el.ParentId == parentId) {
+                result.push(el);
+                assemble(arr, el.Id, result);
+            }
+        })
+        return result;
+    }
+
+    function renderTable() {
+        $table = $("#pr-report").DataTable({
+            pageLength: 1000,
+            dom: 'Bfrtip',
+            ordering: true,
+            select: true,
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'Release Plan',
+                exportOptions: {
+                    columns: [ 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                        1, 14, 15, 16, 17, 18, 19, 20,
+                        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+                },
+            }],
+            columns: [
+                {
+                    title: "Type", data: "Type", className: "dt-center", responsivePriority: 1, render: function (value, meta, row) {
+                        let c = row.Type.replace(' ', '');
+                        return `<i class="fa fa-${type[c].icon} ${type[c].className}"></i>`;
+                    }
+                },
+                { title: "Title Complete", data: "Title", defaultContent: "", responsivePriority: 10001 },
+                { title: "WI Id", data: "Id", responsivePriority: 2, render: function (value) { return formatLink(wiBaseUrl + value, value); } },
+                { title: "Committed", data: "ClientandBusinessCommitted", defaultContent: "", responsivePriority: 10001 },
+                { title: "Priority", data: "Priority", defaultContent: "", responsivePriority: 5 },
+                { title: "Risk", data: "Risk", defaultContent: "", responsivePriority: 10001 },
+                { title: "Severity", data: "Severity", defaultContent: "", responsivePriority: 10001 },
+                { title: "Work Item Type", data: "WorkItemType", defaultContent: "", responsivePriority: 10001 },
+                { title: "DevOps ID", data: "InternationalDevOpsID", defaultContent: "", responsivePriority: 10001 },
+                { title: "State", data: "State", defaultContent: "", responsivePriority: 3 },
+                { title: "Tags", data: "Tags", defaultContent: "", responsivePriority: 10001 },
+                { title: "Title", data: "Title", defaultContent: "", responsivePriority: 4, render: function (value) { return CharacterTrim50(value); } },
+                {
+                    title: "Pull Request", data: "PR", responsivePriority: 6, render: function (value, meta, row) {
+                        let html = '';
+                        if (value.length == 0)
+                            html = '';
+                        else if (value.length > 1) {
+                            let branch = value[0].targetRefName.substring(value[0].targetRefName.lastIndexOf('/') + 1, value[0].targetRefName.length);
+                            html += `<a href="${prBaseUrl}${repoId}/pullrequest/${value[0].pullRequestId}" target='_blank' class="tt span-badge badge badge-${badge[value[0].status]} min-100" >${branch}: ${value[0].pullRequestId}</a> ...`;
+                        }
+                        else {
+                            let branch = value[0].targetRefName.substring(value[0].targetRefName.lastIndexOf('/') + 1, value[0].targetRefName.length);
+                            html += `<a href="${prBaseUrl}${repoId}/pullrequest/${value[0].pullRequestId}" target='_blank' class="tt span-badge badge badge-${badge[value[0].status]} min-100" >${branch}: ${value[0].pullRequestId}</a>`;
+                        }
+
+                        return html;
+                    }
+                },
+                {
+                    title: "Pull Request Complete", data: "PR", responsivePriority: 10001, render: function (value, meta, row) {
+                        let html = '';
+                        if (value.length == 0)
+                            html = '';
+                        else {
+                            value.forEach(function (val) {
+                                let branch = val.targetRefName.substring(val.targetRefName.lastIndexOf('/') + 1, val.targetRefName.length);
+                                html += `   <a href="${prBaseUrl}${repoId}/pullrequest/${val.pullRequestId}" target='_blank' class="tt span-badge badge badge-${badge[val.status]} min-100" >${branch}: ${val.pullRequestId}</a>`;
+                            });
+                            html = html.substring(3);
+                        }
+
+                        return html;
+                    }
+                },
+                { title: "Release Date", data: "ReleaseDate", defaultContent: "", responsivePriority: 9, render: function (value) { return formatDate(value); } },
+                { title: "Project Manager", data: "ProjectManager", defaultContent: "", responsivePriority: 10001 },
+                { title: "Iteration Path", data: "IterationPath", defaultContent: "", responsivePriority: 10001 },
+                { title: "Assigned To", data: "AssignedTo", defaultContent: "", responsivePriority: 10001 },
+                { title: "LOE", data: "LOE", defaultContent: "", responsivePriority: 10001 },
+                { title: "Dev Start Date", data: "DevStartDate", defaultContent: "", responsivePriority: 100001, render: function (value) { return formatDate(value); } },
+                { title: "Dev End Date", data: "DevEndDate", defaultContent: "", responsivePriority: 10001, render: function (value) { return formatDate(value); } },
+                { title: "Dev Pct Complete", data: "DevPctComplete", defaultContent: "", responsivePriority: 10001 },
+                { title: "Original Estimate", data: "OriginalEstimate", defaultContent: "", responsivePriority: 10001 },
+                { title: "Remaining Work", data: "RemainingWork", defaultContent: "", responsivePriority: 10001 },
+                { title: "Completed Work", data: "CompletedWork", defaultContent: "", responsivePriority: 10001 },
+                { title: "Dev Due Date", data: "DueDate", defaultContent: "", responsivePriority: 7, render: function (value) { return formatDate(value); } },
+                { title: "Config Changes", data: "ConfigChanges", defaultContent: "", responsivePriority: 10001 },
+                { title: "QA Resource", data: "QAResource", defaultContent: "", responsivePriority: 10001 },
+                { title: "QA Start Date", data: "StartDate", defaultContent: "", responsivePriority: 10001, render: function (value) { return formatDate(value); } },
+                { title: "QA End Date", data: "EndDate", defaultContent: "", responsivePriority: 10001, render: function (value) { return formatDate(value); } },
+                { title: "QA LOE", data: "QALOE", defaultContent: "", responsivePriority: 8 },
+                { title: "Actual Hours", data: "QAActualHours", defaultContent: "", responsivePriority: 10001 },
+            ],
+            "createdRow": function (row, data, dataIndex) {
+                $(row).addClass(`r${data.Type.replace(' ', '')}`);
+                if (data.Type == "Task" || data.Type == "Bug") {
+                    let releaseDate = data.ReleaseDate === undefined ? '-1' : moment(data.ReleaseDate).format("MM/DD").toString();
+                    if (releases.indexOf(releaseDate) === -1)
+                        $(row).addClass("cWarning");
+                }
+            }
+        });
+    }
+
+    function populate(lst) {
+        let sum = getSummary(lst);
+        $("#QaPassed").text(sum.QaPassed);
+        $("#QaTesting").text(sum.QaTesting);
+        $("#QaFailed").text(sum.QaFailed);
+        $("#QaDeploy").text(sum.QaDeploy);
+        $("#DevReview").text(sum.DevReview);
+        $("#Development").text(sum.Development);
+        $("#MoreInfo").text(sum.MoreInfo);
+        $("#ReadyForDev").text(sum.ReadyForDev);
+        $("#Count").text(sum.Count);
+        let sum2 = sum.QaPassed + sum.QaTesting + sum.QaDeploy + sum.DevReview + sum.Development + sum.ReadyForDev;
+        $("#Count2").text(sum2);
+
+        $table.clear().rows.add(lst).draw();
+        $(".table").removeClass("invisible").addClass("visible");
+        $(".state").removeClass("visible").addClass("invisible").hide();
+        $(".tt").tooltip();
+        $("body").resize()
+    }
+
+    $(document).ready(function () {
+
+        $('#ddlState').multiselect({
+            buttonTextAlignment: 'left',
+            includeSelectAllOption: true,
+            selectAllName: 'All states',
+        });
+        $("#ddlState").multiselect('selectAll', false);
+        $("#ddlState").multiselect('updateButtonText');
+
+        $("#ddlState").change(function () {
+            let val = $("#ddlState").val().toString().replaceAll(',', '|');
+            $table.column(9).search(val, true, true).draw();
+        });
+
+        $("html").css("overflow-y", "hidden");
+        releases.map(function (r) { $("#ddlRelease").append(new Option(r, r)) });
+
+        $("#ddlRelease").change(function (e) {
+            populate(filterRelease(this.value));
+        });
+
+        $("#chkShowParents").change(function () {
+            if ($("#chkShowParents").is(":checked")) {
+                $table.column(7).search("", true, true).draw();
+            }
+            else {
+                $table.column(7).search("Task|Bug", true, true).draw();
+            }
+        });
+
+        renderTable();
+        getData().then((lst) => {
+            lstTable = lst;
+            populate(lst)
+        });
+
+        customize();
+    });
+</script>
+<div class="card-box widget  vh90">
+    <div class="row">
+        <div class="col-md-5">
+            <a class="table invisible collapsed" data-toggle="collapse" href="#collapse"><i class="fa fa-filter"></i>Filters</a>
+        </div>
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+        </div>
+        <div class="col-md-1">
+            <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/currentrelease" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>
+        </div>
+    </div>
+    <div class="table invisible">
+        <div class="row">
+            <div class="col-md-12">
+                <form class="form-inline table invisible" role="form">
+                    <div class="form-group m-l-5 m-t-5">
+                        <select id="ddlRelease" class="form-control">
+                            <option value="">All releases</option>
+                        </select>
+                    </div>
+                    <div class="form-group m-l-5 m-t-5">
+                        <select id="ddlState" data-style="form-control" data-selected-text-format="count > 2" name="states[]" multiple="multiple">
+                            <option value="Resolved">Resolved</option>
+                            <option value="QA\sPassed">QA Passed</option>
+                            <option value="QA$">QA</option>
+                            <option value="QA\sFailed">QA Failed</option>
+                            <option value="Waiting\sQA\sDeployment">Waiting QA Deployment</option>
+                            <option value="Dev\sReview">Dev Review</option>
+                            <option value="Development">Development</option>
+                            <option value="Active">Active</option>
+                            <option value="More\sInfo">More Info</option>
+                            <option value="Ready\sfor\sDev">Ready for Dev</option>
+                            <option value="New">New</option>
+                            <option value="Removed">Removed</option>
+                        </select>
+                    </div>
+                    <div class="form-group m-l-10">
+                        <div class="checkbox checkbox-primary">
+                            <input id="chkShowParents" type="checkbox" class="filter check" checked>
+                            <label for="chkShowParents">
+                                Parents
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <table class="table table-bordered table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Total</th>
+                    <th>QA Passed</th>
+                    <th>QA Testing</th>
+                    <th>QA Failed*</th>
+                    <th>Waiting QA Deploy</th>
+                    <th>Dev Review</th>
+                    <th>Development</th>
+                    <th>More Info*</th>
+                    <th>Ready for Dev</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="Count"></td>
+                    <td id="QaPassed"></td>
+                    <td id="QaTesting"></td>
+                    <td id="QaFailed"></td>
+                    <td id="QaDeploy"></td>
+                    <td id="DevReview"></td>
+                    <td id="Development"></td>
+                    <td id="MoreInfo"></td>
+                    <td id="ReadyForDev"></td>
+                    <td id="Count2"></td>
+                </tr>
+            </tbody>
+        </table>
+        <table id="pr-report" class="display table table-bordered dataTable no-footer compact nowrap responsive" width="100%"></table>
+    </div>
+</div>
