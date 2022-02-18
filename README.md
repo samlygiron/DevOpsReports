@@ -1,12 +1,14 @@
 # Azure DevOps Reports
-Azure Devops - Report Tasks
 
-Simple Net 5 Project
+### Net 5 Project to extend Azure DevOps Platform
 
-ReleaseCoordination - Web Application that utilize Azure DevOps Rest API to create custom Tracking Tasks Reports
+* **ReleaseCoordination** - Web Application that utilize Azure DevOps Rest API to create custom Tracking Tasks Reports
+* **RS.api** - Rest Api to extend DevOps functionalities vía WebHooks
+* **Rs.data** - Database model
 
-RS.api - Rest Api to extend DevOps functionalities vía WebHooks
+### Experimenting with :rocket: :whale: :wheel_of_dharma:
+* Azure pipelinew 
+* Docker
+* Kubernetes 
 
-Rs.data - Database model
-
-Experimenting with Azure pipeline, Docker and Kubernetes Deploy :)
+:grin: Happy Hacking!
