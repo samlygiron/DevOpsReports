@@ -1,5 +1,12 @@
-# DevOpsReports
+# Azure DevOps Reports
 Azure Devops - Report Tasks
-Simple Web Page that utilize Azure DevOps API to create custom task reports (Tracking tasks).
+
+Simple Net 5 Project
+
+ReleaseCoordination - Web Application that utilize Azure DevOps Rest API to create custom Tracking Tasks Reports
+
+RS.api - Rest Api to extend DevOps functionalities vía WebHooks
+
+Rs.data - Database model
 
 Experimenting with Azure pipeline, Docker and Kubernetes Deploy :)
