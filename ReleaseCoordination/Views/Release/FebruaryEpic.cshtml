@@ -186,7 +186,17 @@
                 })
             });
 
-            lstRows = [...lstTask, ...lstUS, ...lstFeature];
+            let lstEpic = [];
+            lstFeature.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket" || row.Type == "Epic") && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstEpic.filter(row => row.Id == item.Id).length;
+                    if (test == 0)
+                        lstEpic.push(item);
+                })
+            });
+
+            lstRows = [...lstTask, ...lstUS, ...lstFeature, ...lstEpic];
             lstRows = [...new Set(lstRows)];
             lstRows = assemble(lstRows);
         }
