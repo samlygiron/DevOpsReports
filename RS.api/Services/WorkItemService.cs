@@ -14,6 +14,7 @@ namespace RS.api.Services
     public interface IWorkItemService
     {
         Task<WorkItemResponse> GetDetailAsync(int workItemId);
+        Task<List<WorkItemResponse>> GetChildsAsync(int workItemId);
         Task<List<string>> GetPullRequestAsync(int workItemId);
         Task UpdateToDevReviewAsync(string workItemId);
         Task UpdateToQAAsync(string workItemId);
@@ -60,6 +61,37 @@ namespace RS.api.Services
             }
 
             return wiR;
+        }
+
+        public async Task<List<WorkItemResponse>> GetChildsAsync(int workItemId)
+        {
+            List<WorkItemResponse> lstChilds = new List<WorkItemResponse>();
+            WorkItemResponse wiR = new WorkItemResponse();
+            string url = string.Format("{0}{1}?$expand=Relations&api-version=5.1", wipatch, workItemId);
+
+            using (HttpClient client = new HttpClient())
+            {
+                Dictionary<string, string> p = new Dictionary<string, string>();
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                    Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes(token)));
+
+                using (HttpResponseMessage response = client.GetAsync(url).Result)
+                {
+                    response.EnsureSuccessStatusCode();
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    wiR = JsonSerializer.Deserialize<WorkItemResponse>(responseBody);
+
+                    List<int> lstRelChilds = wiR.relations.Where(x => x.attributes.name == "Child").Select(x => int.Parse(x.url.Substring(x.url.LastIndexOf("/") + 1))).ToList();
+                    foreach (int c in lstRelChilds)
+                    {
+                        WorkItemResponse child = await GetDetailAsync(c);
+                        lstChilds.Add(child);
+                    }
+                }
+            }
+
+            return lstChilds;
         }
 
         public async Task UpdateToDevReviewAsync(string workItemId)

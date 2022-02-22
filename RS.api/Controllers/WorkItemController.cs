@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RS.api.Models;
 using RS.api.Services;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace RS.api.Controllers
@@ -74,12 +75,23 @@ namespace RS.api.Controllers
             if (wiParam.resource.fields.SystemState.newValue != "QA")
                 return new JsonResult(resp);
 
-            //Get the Parent
+            //Get the Parent 
             WorkItemResponse wiParent = await _workItemService.GetDetailAsync(wiParam.resource.revision.fields.SystemParent);
             
             //Verify if is US
-            //Get all its childs and verify its status
-            //If all are in QA and the US is not QA -> update the status to QA 
+            if(wiParent.fields.SystemWorkItemType == "User Story")
+            {
+                //Get all its childs and verify its status
+                List<WorkItemResponse> lstChilds = await _workItemService.GetChildsAsync(wiParam.resource.revision.fields.SystemParent);
+                foreach(WorkItemResponse child in lstChilds)
+                {
+                    //If all are in QA and the US is not QA -> update the status to QA 
+                }
+            }
+
+
+
+            
 
             return new JsonResult(resp);
         }
