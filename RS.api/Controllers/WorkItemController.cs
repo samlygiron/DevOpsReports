@@ -26,43 +26,6 @@ namespace RS.api.Controllers
             _workItemService = workItemService;
         }
 
-        //[Route("ValidateUpdate")]
-        //[Authorize]
-        //[HttpPost]
-        //public async Task<IActionResult> ValidateUpdate(WorkItemParam wiParam)
-        //{
-        //    string resp = "{ 'status': 0}";
-        //    if(wiParam.resource.fields.SystemState.oldValue != "Dev Review" && wiParam.resource.fields.SystemState.newValue != "Dev Review")
-        //        return new JsonResult(resp);
-
-        //    List<Relation> lst = wiParam.resource.revision.relations;
-        //    foreach (Relation rel in lst)
-        //    {
-        //        if (rel.attributes.name == "Pull Request")
-        //        {
-        //            PullRequestParam param = new PullRequestParam()
-        //            {
-        //                resource = new Resource()
-        //                {
-        //                    pullRequestId = int.Parse(rel.url.Substring((rel.url.Length - 4)))
-        //                }
-        //            };
-
-        //            bool wiStatus = await _pullRequestService.ValidateWorkItemStatusAsync(param);
-
-        //            PullRequestStatusParam prParam = new PullRequestStatusParam()
-        //            {
-        //                context = new ContextModel() { name = "Work Item State" },
-        //                state = wiStatus ? PullRequestStatusParam.SUCCESS_STATE : PullRequestStatusParam.FAIL_STATE
-        //            };
-
-        //            await _pullRequestStatusesService.SetStatusAsync(param.resource.pullRequestId, prParam);
-        //        }
-        //    }
-
-        //    return new JsonResult(resp);
-        //}
-
         [Route("UserStory/ValidateUpdate")]
         [Authorize]
         [HttpPost]
@@ -79,19 +42,34 @@ namespace RS.api.Controllers
             WorkItemResponse wiParent = await _workItemService.GetDetailAsync(wiParam.resource.revision.fields.SystemParent);
             
             //Verify if is US
-            if(wiParent.fields.SystemWorkItemType == "User Story")
+            if(wiParent.fields.SystemWorkItemType == "User Story" 
+                && (wiParent.fields.SystemState != "QA" || wiParent.fields.SystemState != "QA In-Progress"))
             {
+                string[] AceptedTaskStates = { "Removed", "Closed", "Resolved", "QA Passed", "QA", "Waiting QA Deployment" };
+                string[] AceptedBugStates = { "Closed", "QA Passed", "QA", "Resolved", "Waiting QA Deployment" };
+                bool changeUserStoryToQA = true;
+
                 //Get all its childs and verify its status
                 List<WorkItemResponse> lstChilds = await _workItemService.GetChildsAsync(wiParam.resource.revision.fields.SystemParent);
-                foreach(WorkItemResponse child in lstChilds)
+                foreach (WorkItemResponse child in lstChilds)
                 {
                     //If all are in QA and the US is not QA -> update the status to QA 
+                    if (
+                        (child.fields.SystemWorkItemType == "Bug" && !AceptedBugStates.Contains(child.fields.SystemState))
+                        ||
+                        (child.fields.SystemWorkItemType == "Task" && !AceptedTaskStates.Contains(child.fields.SystemState))
+                        )
+                    {
+                        changeUserStoryToQA = false;
+                        break;
+                    }
+                }
+
+                if (changeUserStoryToQA)
+                {
+                    await _workItemService.UpdateToQAAsync(wiParam.resource.revision.fields.SystemParent.ToString());
                 }
             }
-
-
-
-            
 
             return new JsonResult(resp);
         }

@@ -102,7 +102,7 @@ namespace RS.api.Services
             if (pr.value.Count == 0)
                 wiStatus = false;
 
-            foreach (WorkItemModel wi in pr.value)
+            foreach (WorkItem wi in pr.value)
             {
                 wiR = await _workItemService.GetDetailAsync(int.Parse(wi.id));
 

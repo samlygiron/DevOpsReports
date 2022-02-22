@@ -35,7 +35,7 @@ namespace RS.api.Controllers
                 return new JsonResult(resp);
 
             PullRequestResponse pr = await _pullRequestService.GetWorkItems(param);
-            foreach(WorkItemModel wi in pr.value)
+            foreach(WorkItem wi in pr.value)
             {
                 WorkItemResponse wiR = await _workItemService.GetDetailAsync(int.Parse(wi.id));
 
@@ -58,7 +58,7 @@ namespace RS.api.Controllers
                 return new JsonResult(resp);
 
             PullRequestResponse pr = await _pullRequestService.GetBDWorkItems(param);
-            foreach (WorkItemModel wi in pr.value)
+            foreach (WorkItem wi in pr.value)
             {
                 WorkItemResponse wiR = await _workItemService.GetDetailAsync(int.Parse(wi.id));
 
