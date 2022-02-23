@@ -43,7 +43,7 @@ namespace RS.api.Controllers
             
             //Verify if is US
             if(wiParent.fields.SystemWorkItemType == "User Story" 
-                && (wiParent.fields.SystemState != "QA" || wiParent.fields.SystemState != "QA In-Progress"))
+                && (wiParent.fields.SystemState != "QA" && wiParent.fields.SystemState != "QA In-Progress"))
             {
                 string[] AceptedTaskStates = { "Removed", "Closed", "Resolved", "QA Passed", "QA", "Waiting QA Deployment" };
                 string[] AceptedBugStates = { "Closed", "QA Passed", "QA", "Resolved", "Waiting QA Deployment" };
