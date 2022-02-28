@@ -38,6 +38,9 @@ namespace RS.api.Controllers
             if (wiParam.resource.fields.SystemState.newValue != "QA")
                 return new JsonResult(resp);
 
+            if(wiParam.resource.revision.fields.SystemParent == 0)
+                return new JsonResult(resp);
+
             //Get the Parent 
             WorkItemResponse wiParent = await _workItemService.GetDetailAsync(wiParam.resource.revision.fields.SystemParent);
             
