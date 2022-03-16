@@ -31,7 +31,7 @@ namespace RS.api.Controllers
             {
                 _commitService.InsertComplete(param);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new JsonResult(ex);
             }

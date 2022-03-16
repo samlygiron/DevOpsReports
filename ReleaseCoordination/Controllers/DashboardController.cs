@@ -13,7 +13,7 @@ namespace ReleaseCoordination.Controllers
             this.configuration = configuration;
         }
 
-        public IActionResult Active(bool isWidget=false)
+        public IActionResult Active(bool isWidget = false)
         {
             SettingsModel model = new SettingsModel(configuration);
             ViewBag.Host = model.Host;

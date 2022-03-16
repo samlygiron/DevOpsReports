@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RS.data.Model
+﻿namespace RS.data.Model
 {
     public class PullRequest
     {
@@ -156,4 +150,4 @@ namespace RS.data.Model
         public string descriptor { get; set; }
     }
     */
-    }
+}

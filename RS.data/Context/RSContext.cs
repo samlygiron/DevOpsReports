@@ -1,6 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
+﻿using Microsoft.EntityFrameworkCore;
 using RS.data.Model;
 
 #nullable disable
@@ -9,7 +7,7 @@ namespace RS.data.Context
 {
     public partial class RSContext : DbContext
     {
-       
+
         public RSContext(DbContextOptions<RSContext> options)
             : base(options)
         {

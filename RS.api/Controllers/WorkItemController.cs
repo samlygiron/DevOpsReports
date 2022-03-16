@@ -38,14 +38,14 @@ namespace RS.api.Controllers
             if (wiParam.resource.fields.SystemState.newValue != "QA")
                 return new JsonResult(resp);
 
-            if(wiParam.resource.revision.fields.SystemParent == 0)
+            if (wiParam.resource.revision.fields.SystemParent == 0)
                 return new JsonResult(resp);
 
             //Get the Parent 
             WorkItemResponse wiParent = await _workItemService.GetDetailAsync(wiParam.resource.revision.fields.SystemParent);
-            
+
             //Verify if is US
-            if(wiParent.fields.SystemWorkItemType == "User Story" 
+            if (wiParent.fields.SystemWorkItemType == "User Story"
                 && (wiParent.fields.SystemState != "QA" && wiParent.fields.SystemState != "QA In-Progress"))
             {
                 string[] AceptedTaskStates = { "Removed", "Closed", "Resolved", "QA Passed", "QA", "Waiting QA Deployment" };

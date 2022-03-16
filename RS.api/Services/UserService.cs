@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using RS.api.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +22,7 @@ namespace RS.api.Services
             string pass = configuration.GetSection("AppSettings").GetSection("Identity").Value;
             this._users = new List<User>
             {
-                
+
                 new User { Id = 1, FirstName = "Test", LastName = "User", Username = user, Password = pass }
             };
         }

@@ -25,7 +25,7 @@ namespace RS.api.Controllers
             _workItemService = workItemService;
             _pullRequestStatusesService = pullRequestStatusesService;
         }
-        
+
         [Route("CompleteWorkItems")]
         [HttpPost]
         public async Task<IActionResult> CompleteItems(PullRequestParam param)
@@ -35,11 +35,11 @@ namespace RS.api.Controllers
                 return new JsonResult(resp);
 
             PullRequestResponse pr = await _pullRequestService.GetWorkItems(param);
-            foreach(WorkItem wi in pr.value)
+            foreach (WorkItem wi in pr.value)
             {
                 WorkItemResponse wiR = await _workItemService.GetDetailAsync(int.Parse(wi.id));
 
-                if ((wiR.fields.SystemWorkItemType == "Bug" || wiR.fields.SystemWorkItemType == "Task") 
+                if ((wiR.fields.SystemWorkItemType == "Bug" || wiR.fields.SystemWorkItemType == "Task")
                     && (wiR.fields.SystemState == "Dev Review"))
                 {
                     await _workItemService.UpdateToDevReviewAsync(wi.id);
@@ -88,17 +88,17 @@ namespace RS.api.Controllers
 
                 PullRequestStatusParam prParam = new PullRequestStatusParam()
                 {
-                    context = new ContextModel(){ name = "Work Item State" },
+                    context = new ContextModel() { name = "Work Item State" },
                     state = wiStatus ? PullRequestStatusParam.SUCCESS_STATE : PullRequestStatusParam.FAIL_STATE
                 };
 
                 await _pullRequestStatusesService.SetStatusAsync(param.resource.pullRequestId, prParam);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new JsonResult(ex);
             }
-            
+
             return new JsonResult(resp);
         }
     }

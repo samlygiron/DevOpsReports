@@ -1,13 +1,13 @@
-﻿using RS.api.Models;
+﻿using Microsoft.Extensions.Configuration;
+using RS.api.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Linq;
-using Microsoft.Extensions.Configuration;
 
 namespace RS.api.Services
 {
@@ -38,7 +38,7 @@ namespace RS.api.Services
 
             wipatch = string.Format("https://dev.azure.com/{0}/_apis/wit/workitems/", organizationName, projectName);
             prurl = string.Format("https://dev.azure.com/{0}/{1}/_apis/git/pullrequests/", organizationName, projectName);
-    }
+        }
 
         public async Task<WorkItemResponse> GetDetailAsync(int workItemId)
         {
@@ -160,11 +160,11 @@ namespace RS.api.Services
                     wiR = JsonSerializer.Deserialize<WorkItemResponse>(responseBody);
 
                     resp = (from w in wiR.relations
-                                 where w.url.Contains("Git/PullRequestId/")
-                                 select w.url.Split("%2F")[2]).ToList();
+                            where w.url.Contains("Git/PullRequestId/")
+                            select w.url.Split("%2F")[2]).ToList();
 
                     //###
-                    foreach(string pr in resp)
+                    foreach (string pr in resp)
                     {
                         url = string.Format("{0}{1}?api-version=6.0", prurl, pr);
 
@@ -179,7 +179,7 @@ namespace RS.api.Services
                             }
                         }
                     }
-                    
+
 
                 }
             }

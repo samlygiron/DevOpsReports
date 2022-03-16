@@ -1,0 +1,150 @@
+﻿@{
+    ViewData["Title"] = "Active";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script>
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+
+    let ctx;
+    let labels;
+    let lstPRG = [];
+
+    function getMembersTeam() {
+        return new Promise((resolve, reject) => {
+            fetch(`${teamBaseUrl}`)
+                .then((lst) => {
+                    let lstRes = [];
+                    for (let mem of lst.value)
+                        lstRes.push(mem.identity.displayName);
+                    resolve(lstRes);
+                });
+        });
+    }
+
+    function getPullRequest() {
+        return new Promise((resolve, reject) => {
+            let data = [];
+            fetch(`${gitBaseUrl}pullrequests`)
+                .then((lstPR) => {
+                    let s = lstPR.value.length - 1;
+                    for (let pr of lstPR.value) {
+                        fetch(`${gitBaseUrl}repositories/${pr.repository.id}/pullRequests/${pr.pullRequestId}/workitems`)
+                            .then((lstWI) => {
+                                for (let rev of pr.reviewers) {
+                                    let row = {};
+                                    row.reviewer = rev.displayName;
+                                    row.pullRequestId = pr.pullRequestId;
+                                    row.title = pr.title;
+                                    row.createdBy = pr.createdBy.displayName;
+                                    row.repo = pr.repository.name;
+                                    row.creationDate = pr.creationDate;
+                                    row.vote = rev.vote;
+                                    if (lstWI !== undefined && lstWI.value[0] !== undefined)
+                                        row.workItemId = lstWI.value[0].id;
+
+                                    data.push(row);
+                                }
+                                if ((s--) == 0)
+                                    resolve(data);
+                            });
+                    }
+                });
+        });
+    }
+
+    function getData(){
+        lstNoVote = [];
+        lstApproved = [];
+
+        newLabels = [];
+        labels.forEach(lbl => {
+            let lNoVote = lstPRG.filter(item => item.reviewer === lbl && item.vote === 0 ).length;
+            let lApproved = lstPRG.filter(item => item.reviewer === lbl && item.vote === 10 ).length;
+
+            if(lNoVote > 0  ){
+                newLabels.push(lbl);
+                lstNoVote.push(lNoVote);
+                lstApproved.push(lApproved);
+            }
+        });
+
+        labels = newLabels;
+
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'No Vote',
+                    data: lstNoVote,
+                    backgroundColor: '#00b19d'
+                }
+            ]
+        };
+    }
+
+    function renderChart(data){
+        const myChart = new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: true,
+                    },
+                    title: {
+                        display: false,
+                        text: ''
+                    },
+                },
+                responsive: true,
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            stepSize: 1
+                        },
+                    },
+                    y: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        ctx = document.getElementById('myChart');
+
+        customize();
+
+        getPullRequest().then((lstPR) => {
+            getMembersTeam().then((lstTeamMembers) => {
+                lstPRG = lstPR;
+                labels = lstTeamMembers;
+                renderChart(getData());
+
+                $(".table").removeClass("invisible").addClass("visible");
+                $(".state").removeClass("visible").addClass("invisible").hide();
+                $("body").resize();
+
+            });
+        });
+    });
+
+</script>
+
+<div class="card-box widget">
+    <div class="row">
+        <div class="col-md-12 table invisible ">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+</div>

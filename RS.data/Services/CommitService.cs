@@ -27,7 +27,7 @@ namespace RS.data.Services
             string releaseName = lst.FirstOrDefault().Release.Name;
 
             Release release = new Release();
-            
+
             foreach (Commit commit in lst)
             {
                 if (commit.Release.Name != release.Name)

@@ -1,5 +1,3 @@
-using System;
-
 namespace ReleaseCoordination.Models
 {
     public class ErrorViewModel

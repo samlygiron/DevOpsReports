@@ -18,7 +18,7 @@ namespace ReleaseCoordination.Models
             this.TopComment = configuration.GetSection("AppSettings").GetSection("BC_TopComment").Value;
 
         }
-            
+
 
         public string Host { get; set; }
         public DateTime CurrentRelease { get; set; }
@@ -26,10 +26,10 @@ namespace ReleaseCoordination.Models
         public bool IsOffCycle { get; set; }
 
         //Branch comparison
- 
+
         public int TopIndex { get; set; }
         public string TopComment { get; set; }
-        
+
         //###
     }
 }

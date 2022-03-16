@@ -38,7 +38,7 @@ namespace RS.api.Services
 
         }
 
-    public async Task<PullRequestStatusResponse> GetStatus(int pullRequestId)
+        public async Task<PullRequestStatusResponse> GetStatus(int pullRequestId)
         {
             PullRequestStatusResponse prs = null;
             using (HttpClient client = new HttpClient())
@@ -69,7 +69,7 @@ namespace RS.api.Services
 
             if (respStatus.state != model.state)
             {
-                if(respStatus.state != null)
+                if (respStatus.state != null)
                     RemoveStatus(pullRequestId);
 
                 using (HttpClient client = new HttpClient())
