@@ -68,7 +68,6 @@ function customize() {
     }
 }
 
-
 function CharacterTrim50(value) {
     if (value.length > 50) {
         return value.substring(0, 50) + "...";

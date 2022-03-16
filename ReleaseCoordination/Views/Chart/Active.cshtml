@@ -87,18 +87,21 @@
         const myChart = new Chart(ctx, {
             type: 'bar',
             data: data,
+            //height: 800,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     legend: {
                         display: true,
+                        position: 'bottom'
                     },
                     title: {
                         display: false,
                         text: ''
                     },
                 },
-                responsive: true,
                 scales: {
                     x: {
                         stacked: true,
@@ -121,20 +124,21 @@
     }
 
     $(document).ready(function () {
+        $(".mn-navbar").hide();
         ctx = document.getElementById('myChart');
-
-        customize();
-
         getPullRequest().then((lstPR) => {
             getMembersTeam().then((lstTeamMembers) => {
                 lstPRG = lstPR;
                 labels = lstTeamMembers;
                 renderChart(getData());
-
                 $(".table").removeClass("invisible").addClass("visible");
                 $(".state").removeClass("visible").addClass("invisible").hide();
-                $("body").resize();
 
+                $(".widget").css("height", "98vh");
+                $("html").css("overflow", "hidden");
+                $("#myChart").height($(".card-box").height()-30);
+                $(".widget").css("overflow", "hidden");
+                $("body").resize();
             });
         });
     });
@@ -142,6 +146,7 @@
 </script>
 
 <div class="card-box widget">
+    <span><font>Active Pull Requests </font></span>
     <div class="row">
         <div class="col-md-12 table invisible ">
             <canvas id="myChart"></canvas>
