@@ -4,6 +4,7 @@
 }
 
 <script>
+    $(".mn-navbar").hide();
     const isWidget = ('@ViewBag.IsWidget' === 'True');
 
     let ctx;
@@ -109,7 +110,8 @@
                             display: false
                         },
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1,
+                            min: 5
                         },
                     },
                     y: {
@@ -124,7 +126,6 @@
     }
 
     $(document).ready(function () {
-        $(".mn-navbar").hide();
         ctx = document.getElementById('myChart');
         getPullRequest().then((lstPR) => {
             getMembersTeam().then((lstTeamMembers) => {
@@ -145,7 +146,8 @@
 
 </script>
 
-<div class="card-box widget">
+<div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+<div class="card-box widget table invisible">
     <span><font>Active Pull Requests </font></span>
     <div class="row">
         <div class="col-md-12 table invisible ">
