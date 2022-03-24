@@ -13,6 +13,16 @@ namespace ReleaseCoordination.Controllers
             this.configuration = configuration;
         }
 
+        public IActionResult April(bool isWidget = false)
+        {
+            SettingsModel model = new SettingsModel(configuration);
+            ViewBag.Host = model.Host;
+            ViewBag.UpdatedDate = model.UpdatedDate;
+            ViewBag.CurrentRelease = model.CurrentRelease;
+            ViewBag.IsOffCycle = model.IsOffCycle;
+            ViewBag.IsWidget = isWidget;
+            return View();
+        }
         public IActionResult March(bool isWidget = false)
         {
             SettingsModel model = new SettingsModel(configuration);

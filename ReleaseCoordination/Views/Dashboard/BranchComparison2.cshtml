@@ -309,14 +309,8 @@
         $("#targetBranch2").val(p2).change();
 
         $(".b1-expand").click(function(){
-            $(".b1-card").removeClass("col-xs-6");
-            $(".b1-card").removeClass("col-sm-6");
-            $(".b1-card").removeClass("col-md-6");
-            $(".b1-card").removeClass("col-lg-6");
-            $(".b1-card").addClass("col-xs-12");
-            $(".b1-card").addClass("col-sm-12");
-            $(".b1-card").addClass("col-md-12");
-            $(".b1-card").addClass("col-lg-12");
+            $(".b1-card").removeClass("col-xs-6").removeClass("col-sm-6").removeClass("col-md-6").removeClass("col-lg-6");
+            $(".b1-card").addClass("col-xs-12").addClass("col-sm-12").addClass("col-md-12").addClass("col-lg-12");
             $(".b1-expand").hide();
             $(".b1-compress").show();
             $(".b2-card").hide();
@@ -324,14 +318,8 @@
         });
 
         $(".b1-compress").click(function(){
-            $(".b1-card").removeClass("col-xs-12");
-            $(".b1-card").removeClass("col-sm-12");
-            $(".b1-card").removeClass("col-md-12");
-            $(".b1-card").removeClass("col-lg-12");
-            $(".b1-card").addClass("col-xs-6");
-            $(".b1-card").addClass("col-sm-6");
-            $(".b1-card").addClass("col-md-6");
-            $(".b1-card").addClass("col-lg-6");
+            $(".b1-card").removeClass("col-xs-12").removeClass("col-sm-12").removeClass("col-md-12").removeClass("col-lg-12");
+            $(".b1-card").addClass("col-xs-6").addClass("col-sm-6").addClass("col-md-6").addClass("col-lg-6");
             $(".b1-expand").show();
             $(".b1-compress").hide();
             $(".b2-card").show();
@@ -339,14 +327,8 @@
         });
 
         $(".b2-expand").click(function(){
-            $(".b2-card").removeClass("col-xs-6");
-            $(".b2-card").removeClass("col-sm-6");
-            $(".b2-card").removeClass("col-md-6");
-            $(".b2-card").removeClass("col-lg-6");
-            $(".b2-card").addClass("col-xs-12");
-            $(".b2-card").addClass("col-sm-12");
-            $(".b2-card").addClass("col-md-12");
-            $(".b2-card").addClass("col-lg-12");
+            $(".b2-card").removeClass("col-xs-6").removeClass("col-sm-6").removeClass("col-md-6").removeClass("col-lg-6");
+            $(".b2-card").addClass("col-xs-12").addClass("col-sm-12").addClass("col-md-12").addClass("col-lg-12");
             $(".b2-expand").hide();
             $(".b2-compress").show();
             $(".b1-card").hide();
@@ -354,43 +336,30 @@
         });
 
         $(".b2-compress").click(function(){
-            $(".b2-card").removeClass("col-xs-12");
-            $(".b2-card").removeClass("col-sm-12");
-            $(".b2-card").removeClass("col-md-12");
-            $(".b2-card").removeClass("col-lg-12");
-            $(".b2-card").addClass("col-xs-6");
-            $(".b2-card").addClass("col-sm-6");
-            $(".b2-card").addClass("col-md-6");
-            $(".b2-card").addClass("col-lg-6");
+            $(".b2-card").removeClass("col-xs-12").removeClass("col-sm-12").removeClass("col-md-12").removeClass("col-lg-12");
+            $(".b2-card").addClass("col-xs-6").addClass("col-sm-6").addClass("col-md-6").addClass("col-lg-6");
             $(".b2-expand").show();
             $(".b2-compress").hide();
             $(".b1-card").show();
             $("body").resize();
         });
 
-        $('#ddlState1').multiselect({
-            buttonTextAlignment: 'left',
-            includeSelectAllOption: true,
-            selectAllName: 'All states',
-        });
+        $('#ddlState1').multiselect({ buttonTextAlignment: 'left', includeSelectAllOption: true, selectAllName: 'All states' });
         $("#ddlState1").multiselect('selectAll', false);
         $("#ddlState1").multiselect('updateButtonText');
-
         $("#ddlState1").change(function () {
             let val = $("#ddlState1").val().toString().replaceAll(',', '|');
             $("#branch1").DataTable().column(3).search(val, true, true).draw();
         });
 
+        $('#ddlState2').multiselect({ buttonTextAlignment: 'left', includeSelectAllOption: true, selectAllName: 'All states' });
         $("#ddlState2").multiselect('selectAll', false);
         $("#ddlState2").multiselect('updateButtonText');
-
          $("#ddlState2").change(function () {
             let val = $("#ddlState2").val().toString().replaceAll(',', '|');
             $("#branch2").DataTable().column(3).search(val, true, true).draw();
         });
-
     });
-
 </script>
 <div class="card-box widget">
     <div class="row">
