@@ -368,6 +368,27 @@
             $("body").resize();
         });
 
+        $('#ddlState1').multiselect({
+            buttonTextAlignment: 'left',
+            includeSelectAllOption: true,
+            selectAllName: 'All states',
+        });
+        $("#ddlState1").multiselect('selectAll', false);
+        $("#ddlState1").multiselect('updateButtonText');
+
+        $("#ddlState1").change(function () {
+            let val = $("#ddlState1").val().toString().replaceAll(',', '|');
+            $("#branch1").DataTable().column(3).search(val, true, true).draw();
+        });
+
+        $("#ddlState2").multiselect('selectAll', false);
+        $("#ddlState2").multiselect('updateButtonText');
+
+         $("#ddlState2").change(function () {
+            let val = $("#ddlState2").val().toString().replaceAll(',', '|');
+            $("#branch2").DataTable().column(3).search(val, true, true).draw();
+        });
+
     });
 
 </script>
@@ -392,7 +413,7 @@
                 <a class="b1-compress" href="javascript:;" ><i class="fa fa-compress"></i></a>
             </div>
             <form class="form-inline m-b-20" role="form">
-                <div class="form-group">
+                <div class="form-group mr-3">
                     <select id="targetBranch1" class="form-control filter max-w-250">
                         <option value="">Branch</option>
                         <option value="master">master</option>
@@ -402,7 +423,23 @@
                         <option value="demo">demo</option>
                     </select>
                 </div>
-                <div class="form-group m-l-10">
+                <div class="form-group mr-3">
+                    <select id="ddlState1" data-style="form-control" data-selected-text-format="count > 2" name="states[]" multiple="multiple">
+                        <option value="Resolved">Resolved</option>
+                        <option value="QA\sPassed">QA Passed</option>
+                        <option value="QA$">QA</option>
+                        <option value="QA\sFailed">QA Failed</option>
+                        <option value="Waiting\sQA\sDeployment">Waiting QA Deployment</option>
+                        <option value="Dev\sReview">Dev Review</option>
+                        <option value="Development">Development</option>
+                        <option value="Active">Active</option>
+                        <option value="More\sInfo">More Info</option>
+                        <option value="Ready\sfor\sDev">Ready for Dev</option>
+                        <option value="New">New</option>
+                        <option value="Removed">Removed</option>
+                    </select>
+                </div>
+                <div class="form-group mr-3">
                     <div class="checkbox checkbox-primary">
                         <input id="onlyChangesBranch1" type="checkbox" class="filter check">
                         <label for="onlyChangesBranch1">
@@ -420,7 +457,7 @@
                 <a class="b2-compress" href="javascript:;" ><i class="fa fa-compress"></i></a>
             </div>
             <form class="form-inline m-b-20" role="form">
-                <div class="form-group">
+                <div class="form-group mr-3">
                     <select id="targetBranch2" class="form-control filter max-w-250">
                         <option value="">Branch</option>
                         <option value="master">master</option>
@@ -430,7 +467,23 @@
                         <option value="demo">demo</option>
                     </select>
                 </div>
-                <div class="form-group m-l-10">
+                <div class="form-group mr-3">
+                    <select id="ddlState2" data-style="form-control" data-selected-text-format="count > 2" name="states[]" multiple="multiple">
+                        <option value="Resolved">Resolved</option>
+                        <option value="QA\sPassed">QA Passed</option>
+                        <option value="QA$">QA</option>
+                        <option value="QA\sFailed">QA Failed</option>
+                        <option value="Waiting\sQA\sDeployment">Waiting QA Deployment</option>
+                        <option value="Dev\sReview">Dev Review</option>
+                        <option value="Development">Development</option>
+                        <option value="Active">Active</option>
+                        <option value="More\sInfo">More Info</option>
+                        <option value="Ready\sfor\sDev">Ready for Dev</option>
+                        <option value="New">New</option>
+                        <option value="Removed">Removed</option>
+                    </select>
+                </div>
+                <div class="form-group mr-3">
                     <div class="checkbox checkbox-primary">
                         <input id="onlyChangesBranch2" type="checkbox" class="filter check">
                         <label for="onlyChangesBranch2">
