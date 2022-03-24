@@ -241,6 +241,8 @@
     }
 
     $(document).ready(function () {
+        $(".b1-compress").hide();
+        $(".b2-compress").hide();
         renderTable("#branch1");
         renderTable("#branch2");
 
@@ -306,6 +308,66 @@
         $("#targetBranch1").val(p1).change();
         $("#targetBranch2").val(p2).change();
 
+        $(".b1-expand").click(function(){
+            $(".b1-card").removeClass("col-xs-6");
+            $(".b1-card").removeClass("col-sm-6");
+            $(".b1-card").removeClass("col-md-6");
+            $(".b1-card").removeClass("col-lg-6");
+            $(".b1-card").addClass("col-xs-12");
+            $(".b1-card").addClass("col-sm-12");
+            $(".b1-card").addClass("col-md-12");
+            $(".b1-card").addClass("col-lg-12");
+            $(".b1-expand").hide();
+            $(".b1-compress").show();
+            $(".b2-card").hide();
+            $("body").resize();
+        });
+
+        $(".b1-compress").click(function(){
+            $(".b1-card").removeClass("col-xs-12");
+            $(".b1-card").removeClass("col-sm-12");
+            $(".b1-card").removeClass("col-md-12");
+            $(".b1-card").removeClass("col-lg-12");
+            $(".b1-card").addClass("col-xs-6");
+            $(".b1-card").addClass("col-sm-6");
+            $(".b1-card").addClass("col-md-6");
+            $(".b1-card").addClass("col-lg-6");
+            $(".b1-expand").show();
+            $(".b1-compress").hide();
+            $(".b2-card").show();
+            $("body").resize();
+        });
+
+        $(".b2-expand").click(function(){
+            $(".b2-card").removeClass("col-xs-6");
+            $(".b2-card").removeClass("col-sm-6");
+            $(".b2-card").removeClass("col-md-6");
+            $(".b2-card").removeClass("col-lg-6");
+            $(".b2-card").addClass("col-xs-12");
+            $(".b2-card").addClass("col-sm-12");
+            $(".b2-card").addClass("col-md-12");
+            $(".b2-card").addClass("col-lg-12");
+            $(".b2-expand").hide();
+            $(".b2-compress").show();
+            $(".b1-card").hide();
+            $("body").resize();
+        });
+
+        $(".b2-compress").click(function(){
+            $(".b2-card").removeClass("col-xs-12");
+            $(".b2-card").removeClass("col-sm-12");
+            $(".b2-card").removeClass("col-md-12");
+            $(".b2-card").removeClass("col-lg-12");
+            $(".b2-card").addClass("col-xs-6");
+            $(".b2-card").addClass("col-sm-6");
+            $(".b2-card").addClass("col-md-6");
+            $(".b2-card").addClass("col-lg-6");
+            $(".b2-expand").show();
+            $(".b2-compress").hide();
+            $(".b1-card").show();
+            $("body").resize();
+        });
+
     });
 
 </script>
@@ -324,7 +386,11 @@
         </div>
     </div>
     <div class="row">
-        <div class="card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+        <div class="b1-card card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+            <div class="portlet-widgets pull-right">
+                <a class="b1-expand" href="javascript:;" ><i class="fa fa-expand"></i></a>
+                <a class="b1-compress" href="javascript:;" ><i class="fa fa-compress"></i></a>
+            </div>
             <form class="form-inline m-b-20" role="form">
                 <div class="form-group">
                     <select id="targetBranch1" class="form-control filter max-w-250">
@@ -348,7 +414,11 @@
             <table id="branch1" class="display table table-bordered dataTable no-footer compact responsive nowrap" width="100%"></table>
         </div>
 
-        <div class="card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+        <div class="b2-card card-box col-xs-6 col-sm-6 col-md-6 col-lg-6 table invisible">
+            <div class="portlet-widgets pull-right">
+                <a class="b2-expand" href="javascript:;" ><i class="fa fa-expand"></i></a>
+                <a class="b2-compress" href="javascript:;" ><i class="fa fa-compress"></i></a>
+            </div>
             <form class="form-inline m-b-20" role="form">
                 <div class="form-group">
                     <select id="targetBranch2" class="form-control filter max-w-250">
