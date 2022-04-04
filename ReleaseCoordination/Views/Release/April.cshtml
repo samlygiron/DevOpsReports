@@ -28,8 +28,9 @@
         let lstQryRes = await fetch(`${releaseReportURl}`);
         let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
         let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
+        let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200).toString()}&$expand=relations`);
 
-        lstWI = lstWI.value;
+        lstWI = [...lstWI.value, ...lstWI2.value];
 
         let lstPR = await PullRequest.getPullRequestList(250);
         await PullRequest.getWorkItems(lstPR);
