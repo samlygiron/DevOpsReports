@@ -1,12 +1,12 @@
 ﻿@{
-    ViewData["Title"] = "Release - April";
+    ViewData["Title"] = "Release - May";
 }
 
 <script>
-    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/a756cd7c-f08c-4ed4-bdcf-f4143d50b95c/?api-version=6.0`;
+    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/96eabd2e-4e4a-4dc9-b33c-2925e7b1561d/?api-version=6.0`;
     
 
-    const releases = ['04/29'];
+    const releases = ['05/13'];
 
     const isWidget = ('@ViewBag.IsWidget' === 'True');
     const type = [];
@@ -28,9 +28,10 @@
         let lstQryRes = await fetch(`${releaseReportURl}`);
         let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
         let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
-        let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200).toString()}&$expand=relations`);
-
-        lstWI = [...lstWI.value, ...lstWI2.value];
+        
+        //let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200).toString()}&$expand=relations`);
+        //lstWI = [...lstWI.value, ...lstWI2.value];
+        lstWI = lstWI.value;
 
         let lstPR = await PullRequest.getPullRequestList(250);
         await PullRequest.getWorkItems(lstPR);
@@ -135,7 +136,7 @@
             State: item.fields['System.State'],
             Tags: item.fields['System.Tags'],
             Title: item.fields['System.Title'],
-            ReleaseDate: (item.fields['System.WorkItemType'] === "Feature" || item.fields['System.WorkItemType'] === "User Story" ) ? item.fields['Microsoft.VSTS.Scheduling.TargetDate'] : item.fields['Custom.TargetedReleaseDate'],
+            ReleaseDate: item.fields['Microsoft.VSTS.Scheduling.TargetDate'],
             ProjectManager: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].uniqueName,
             IterationPath: item.fields['System.IterationPath'],
             Area: item.fields['System.AreaPath'],
