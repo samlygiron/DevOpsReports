@@ -56,7 +56,7 @@
 
 
         lstDevTeam = await getMembersTeam(teamBaseUrl);
-        lstQATeam = await getMembersTeam(teamQABaseUrl);
+        //lstQATeam = await getMembersTeam(teamQABaseUrl);
         lstSATeam = await getMembersTeam(teamSABaseUrl);
 
         let lstRows = lstWI.map(function (item) {
@@ -81,12 +81,16 @@
                         if(lstDevTeam.indexOf(item.AssignedTo) > 0 && lstDev.indexOf(item.AssignedTo) < 0)
                             lstDev.push(item.AssignedTo);
                         
-                        else if(lstQATeam.indexOf(item.AssignedTo) > 0 && lstQA.indexOf(item.AssignedTo) < 0)
-                            lstQA.push(item.AssignedTo);
-
                         else if(lstSATeam.indexOf(item.AssignedTo) > 0 && lstSA.indexOf(item.AssignedTo) < 0)
                             lstSA.push(item.AssignedTo);
+
+                        
                     }
+                    if(item.QA !== ''){
+                        if(lstQA.indexOf(item.QA) < 0)
+                            lstQA.push(item.QA);
+                    }
+
                 });
 
                 lstRows[t].Dev = lstDev.toString();
@@ -112,6 +116,7 @@
             Description: item.fields['System.Description'],
             PM: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].displayName,
             AssignedTo: item.fields['System.AssignedTo'] === undefined ? '' : item.fields['System.AssignedTo'].displayName,
+            QA: item.fields['Custom.QAResource'] === undefined ? '' : item.fields['Custom.QAResource'].displayName,
         };
     }
 
@@ -127,17 +132,17 @@
             }],
             columns: [
                 { title: "Id", data: "Id" },
-                { title: "Type", data: "Type", className: "dt-center" },
+                { title: "Type", data: "Type", className: "dt-center", responsivePriority: 10001 },
                 { title: "Request", data: "Request", defaultContent: ""},
                 { title: "Project number", data: "Project", defaultContent: ""},
                 { title: "HLOE", data: "HLOE", defaultContent: ""},
-                { title: "PM", data: "PM", defaultContent: ""},
-                { title: "SA", data: "SA", defaultContent: ""},
-                { title: "DEV", data: "Dev", defaultContent: ""},
-                { title: "QA", data: "QA", defaultContent: ""},
+                { title: "PM", data: "PM", defaultContent: "", responsivePriority: 10001},
+                { title: "SA", data: "SA", defaultContent: "", responsivePriority: 10001},
+                { title: "DEV", data: "Dev", defaultContent: "", responsivePriority: 10001},
+                { title: "QA", data: "QA", defaultContent: "", responsivePriority: 10001},
                 { title: "Project phase", data: "State", defaultContent: ""},
                 { title: "Planned release", data: "TargetedReleaseDate", defaultContent: "", render: function (value) { return formatDate(value); }},
-                { title: "Project summary", data: "Description", defaultContent: "" },
+                { title: "Project summary", data: "Description", defaultContent: "", responsivePriority: 10001 },
                 { title: "Analysis end", data: "AnalysisEnd", defaultContent: "" },
                 { title: "Analysis start", data: "AnalysisStart", defaultContent: "" },
                 { title: "Dev CPLT", data: "DevCPLT", defaultContent: "" },
@@ -145,7 +150,7 @@
                 { title: "Dev LOE", data: "DevLoe", defaultContent: "" },
                 { title: "Dev start", data: "DevStart", defaultContent: "" },
                 { title: "Project healt", data: "ProjectHealt", defaultContent: "" },
-                { title: "Project name", data: "Title", defaultContent: "" },
+                { title: "Project name", data: "Title", defaultContent: "", responsivePriority: 1 },
                 { title: "QA CPLT", data: "QACPLT", defaultContent: "" },
                 { title: "QA end", data: "QAEnd", defaultContent: "" },
                 { title: "QA LOE", data: "QALoe", defaultContent: "" },
@@ -184,6 +189,6 @@
         </div>
     </div>
     <div class="table invisible">
-        <table id="pr-report" class="display table table-bordered dataTable no-footer compact nowrap" width="100%"></table>
+        <table id="pr-report" class="display table table-bordered dataTable no-footer compact nowrap responsive" width="100%"></table>
     </div>
 </div>
