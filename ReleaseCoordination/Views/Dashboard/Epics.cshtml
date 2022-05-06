@@ -1,0 +1,180 @@
+﻿@{
+    ViewData["Title"] = "Epics";
+}
+
+<script>
+    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/3d242c72-f33b-4f46-afad-3803158337e8/?api-version=6.0`;
+    
+    const isWidget = ('@ViewBag.IsWidget' === 'True');
+    const type = [];
+    type["Bug"] = { icon: "bug", className: "cBug" };
+    type["Task"] = { icon: "sticky-note", className: "cTask" };
+    type["UserStory"] = { icon: "leanpub", className: "cUserStory" };
+    type["Feature"] = { icon: "trophy", className: "cFeature" };
+    type["Ticket"] = { icon: "fa-ticket", className: "cUserStory" };
+    type["Epic"] = { icon: "star", className: "cEpic" };
+
+    const badge = [];
+    badge["completed"] = "success";
+    badge["active"] = "warning";
+
+    let $table;
+    let lstTable;
+
+    let lstDevTeam;
+    let lstQATeam;
+    let lstSATeam;
+
+    async function getMembersTeam(team) {
+        return new Promise((resolve, reject) => {
+            fetch(`${team}`)
+                .then((lst) => {
+                    let lstRes = [];
+                    for (let mem of lst.value)
+                        lstRes.push(mem.identity.displayName);
+                    resolve(lstRes);
+                });
+        });
+    }
+
+    async function getData() {
+        let lstQryRes = await fetch(`${releaseReportURl}`);
+        let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
+        let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
+        
+        let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200, 400).toString()}&$expand=relations`);
+        let lstWI3 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(400).toString()}&$expand=relations`);
+        lstWI = [...lstWI.value, ...lstWI2.value, ...lstWI3.value];
+
+        //console.log(lstWI);
+
+        lstDevTeam = await getMembersTeam(teamBaseUrl);
+        lstQATeam = await getMembersTeam(teamQABaseUrl);
+        lstSATeam = await getMembersTeam(teamSABaseUrl);
+        
+        //console.log(lstDevTeam);
+        //console.log(lstQATeam);
+        //console.log(lstSATeam);
+
+        let lstRows = lstWI.map(function (item) {
+            return wiMapper(item);
+        });
+
+        //console.table(lstRows);
+
+
+        let t = 0;
+        for(let x=1;x<lstRows.length;x++){
+            if(lstRows[x].Type == "Epic" || x == lstRows.length - 1){
+        
+                lstRowsAux = [...lstRows];
+                let lstEpicRows = lstRowsAux.splice(t, x);
+                
+                //console.log(lstEpicRows);
+                
+                //Start
+                let lstResource = "";
+                lstEpicRows.map(function (item) {
+                    //console.log("#");
+                    //console.log(item.AssignedTo);
+                    lstResource += ", " + item.AssignedTo;
+                });
+
+                console.log(x);
+                console.log(lstRows[t]);
+                lstRows[t].Dev = lstResource.length > 1 ? lstResource.substring(2) : '';
+                
+                t = x;
+            }
+        }
+
+        lstRows = lstRows.filter(wi => wi.Type == "Epic");
+        return lstRows ;
+    }
+
+    function wiMapper(item) {
+        return {
+            Id: item.id,
+            Title: item.fields['System.Title'],
+            State: item.fields['System.State'],
+            Type: item.fields['System.WorkItemType'],
+            Project: item.fields['Custom.ChangePointProject#'],
+            TargetedReleaseDate: item.fields['Custom.TargetedReleaseDate'],
+            Description: item.fields['System.Description'],
+            PM: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].displayName,
+            AssignedTo: item.fields['System.AssignedTo'] === undefined ? '' : item.fields['System.AssignedTo'].displayName,
+        };
+    }
+
+     function renderTable() {
+        $table = $("#pr-report").DataTable({
+            pageLength: 1000,
+            ordering: false,
+            select: true,
+            dom: 'Bfrtip',
+            buttons: [{
+                extend: 'excelHtml5',
+                title: 'Epics',
+            }],
+            columns: [
+                { title: "Id", data: "Id" },
+                { title: "Type", data: "Type", className: "dt-center" },
+                { title: "Request", data: "Request", defaultContent: ""},
+                { title: "Project number", data: "Project", defaultContent: ""},
+                { title: "HLOE", data: "HLOE", defaultContent: ""},
+                { title: "PM", data: "PM", defaultContent: ""},
+                { title: "SA", data: "SA", defaultContent: ""},
+                { title: "DEV", data: "Dev", defaultContent: ""},
+                { title: "QA", data: "QA", defaultContent: ""},
+                { title: "Project phase", data: "State", defaultContent: ""},
+                { title: "Planned release", data: "TargetedReleaseDate", defaultContent: "", render: function (value) { return formatDate(value); }},
+                { title: "Project summary", data: "Description", defaultContent: "" },
+                { title: "Analysis end", data: "AnalysisEnd", defaultContent: "" },
+                { title: "Analysis start", data: "AnalysisStart", defaultContent: "" },
+                { title: "Dev CPLT", data: "DevCPLT", defaultContent: "" },
+                { title: "Dev end", data: "DevEnd", defaultContent: "" },
+                { title: "Dev LOE", data: "DevLoe", defaultContent: "" },
+                { title: "Dev start", data: "DevStart", defaultContent: "" },
+                { title: "Project healt", data: "ProjectHealt", defaultContent: "" },
+                { title: "Project name", data: "Title", defaultContent: "" },
+                { title: "QA CPLT", data: "QACPLT", defaultContent: "" },
+                { title: "QA end", data: "QAEnd", defaultContent: "" },
+                { title: "QA LOE", data: "QALoe", defaultContent: "" },
+                { title: "QA start", data: "QAStart", defaultContent: "" },
+                { title: "SA CPLT", data: "SACPLT", defaultContent: "" },
+                { title: "SA LOE", data: "SALoe", defaultContent: "" },
+                { title: "ViaOne product", data: "ViaOneProduct", defaultContent: "" },
+                { title: "Request status", data: "RequestStatus", defaultContent: "" },
+                { title: "Road to green", data: "RoadTogreen", defaultContent: "" },
+            ],
+        });
+    }
+
+     function populate(lst) {
+        $table.clear().rows.add(lst).draw();
+        $(".table").removeClass("invisible").addClass("visible");
+        $(".state").removeClass("visible").addClass("invisible").hide();
+        $(".tt").tooltip();
+        $("body").resize()
+    }
+
+    $(document).ready(function () {
+        renderTable();
+        getData().then((lst) => {
+            lstTable = lst;
+            populate(lst);
+        });
+
+        customize();
+    });
+</script>
+<div class="card-box widget  vh90">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
+        </div>
+    </div>
+    <div class="table invisible">
+        <table id="pr-report" class="display table table-bordered dataTable no-footer compact nowrap" width="100%"></table>
+    </div>
+</div>

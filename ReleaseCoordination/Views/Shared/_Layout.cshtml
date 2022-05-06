@@ -55,6 +55,8 @@
         let RepoId = '@Configuration.GetSection("AppSettings")["RepoId"]';
         let CommitURL = '@Configuration.GetSection("AppSettings")["CommitURL"]';
         let TeamURL = '@Configuration.GetSection("AppSettings")["TeamURL"]';
+        let QATeamURL = '@Configuration.GetSection("AppSettings")["QATeamURL"]';
+        let SATeamURL = '@Configuration.GetSection("AppSettings")["SATeamURL"]';
         let ApiUrl = '@Configuration.GetSection("AppSettings")["ApiURL"]';
         let ApiCredential = '@Configuration.GetSection("AppSettings")["ApiCredential"]';
     </script>
@@ -127,6 +129,9 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="counter">Counter</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="dashboard" asp-action="epics">Epics</a>
                         </li>
                     </ul>
                 </div>

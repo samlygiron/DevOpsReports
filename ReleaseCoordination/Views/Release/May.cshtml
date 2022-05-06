@@ -197,7 +197,6 @@
 
             lstRows = [...lstTask, ...lstUS, ...lstFeature, ...lstEpic];
             lstRows = [...new Set(lstRows)];
-            console.table(lstRows);
             lstRows = assemble(lstRows);
         }
 
@@ -228,7 +227,15 @@
                         1, 14, 15, 16, 17, 18, 19, 20,
                         21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
                 },
-            }],
+            },
+            {
+                text: 'Excel2',
+                action: function ( e, dt, node, config ) {
+                    var data = $table.rows().data();
+                    fetchReport(data.splice(0, data.length));
+                }
+            }
+            ],
             columns: [
                 {
                     title: "Type", data: "Type", className: "dt-center", responsivePriority: 1, render: function (value, meta, row) {
@@ -330,6 +337,25 @@
         $(".state").removeClass("visible").addClass("invisible").hide();
         $(".tt").tooltip();
         $("body").resize()
+    }
+
+    function fetchReport(data) {
+        return new Promise((resolve, reject) => {
+            let lst = [{Id: 1}];
+            console.log(JSON.stringify({rows: lst}));
+
+            $.ajax({
+                url: 'report',
+                type: "POST", 
+                dataType: "JSON", 
+                contentType: "application/json",
+                data: JSON.stringify({rows: data}),
+                error: function () { resolve(); },
+                success: function (resp) { 
+                    resolve(resp); 
+                }
+            });
+        });
     }
 
     $(document).ready(function () {

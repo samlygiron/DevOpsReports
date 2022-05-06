@@ -10,6 +10,8 @@ const buildBaseUrl = `https://dev.azure.com/${organizationName}/${projectName}/_
 const buildResultUrl = `https://${organizationName}.visualstudio.com/${projectName}/_build/results?buildId=`;
 const commitBaseUrl = `https://${organizationName}.visualstudio.com/${projectName}/_git/${CommitURL}`;
 const teamBaseUrl = `https://dev.azure.com/${organizationName}/_apis/projects/${projectName}/teams/${TeamURL}`;
+const teamQABaseUrl = `https://dev.azure.com/${organizationName}/_apis/projects/${projectName}/teams/${QATeamURL}`;
+const teamSABaseUrl = `https://dev.azure.com/${organizationName}/_apis/projects/${projectName}/teams/${SATeamURL}`;
 const branchBaseUrl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/git/repositories/${repoId}/refs?api-version=6.0`;
 
 const apiUrl = ApiUrl;
@@ -69,7 +71,7 @@ function customize() {
 }
 
 function CharacterTrim50(value) {
-    if (value.length > 50) {
+    if (value !== undefined && value.length > 50) {
         return value.substring(0, 50) + "...";
     }
     return value;
