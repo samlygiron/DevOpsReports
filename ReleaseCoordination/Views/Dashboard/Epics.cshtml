@@ -44,7 +44,8 @@
         
         let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200, 400).toString()}&$expand=relations`);
         let lstWI3 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(400).toString()}&$expand=relations`);
-        lstWI = [...lstWI.value, ...lstWI2.value, ...lstWI3.value];
+        //lstWI = [...lstWI.value, ...lstWI2.value, ...lstWI3.value];
+        lstWI = [...lstWI.value, ...lstWI2.value];
 
         //console.log(lstWI);
 
@@ -73,16 +74,17 @@
                 //console.log(lstEpicRows);
                 
                 //Start
-                let lstResource = "";
+                let lstResource = [];
                 lstEpicRows.map(function (item) {
                     //console.log("#");
                     //console.log(item.AssignedTo);
-                    lstResource += ", " + item.AssignedTo;
+                    if(lstResource.indexOf(item.AssignedTo) < 0 && item.AssignedTo !== '')
+                        lstResource += ", " + item.AssignedTo;
                 });
 
                 console.log(x);
                 console.log(lstRows[t]);
-                lstRows[t].Dev = lstResource.length > 1 ? lstResource.substring(2) : '';
+                lstRows[t].Dev = lstResource.toString().substring(1);
                 
                 t = x;
             }
