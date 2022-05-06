@@ -43,26 +43,25 @@
         let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
         
         let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200, 400).toString()}&$expand=relations`);
-        let lstWI3 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(400).toString()}&$expand=relations`);
-        //lstWI = [...lstWI.value, ...lstWI2.value, ...lstWI3.value];
-        lstWI = [...lstWI.value, ...lstWI2.value];
+        let lstWI3 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(400, 600).toString()}&$expand=relations`);
+        let lstWI4 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(600, 800).toString()}&$expand=relations`);
+        
+        lstWI = lstWI.value;
+        if(lstWI2 !== undefined)
+            lstWI = [...lstWI, ...lstWI2.value];
+        if(lstWI3 !== undefined)
+            lstWI = [...lstWI, ...lstWI3.value];
+        if(lstWI4 !== undefined)
+            lstWI = [...lstWI, ...lstWI4.value];
 
-        //console.log(lstWI);
 
         lstDevTeam = await getMembersTeam(teamBaseUrl);
         lstQATeam = await getMembersTeam(teamQABaseUrl);
         lstSATeam = await getMembersTeam(teamSABaseUrl);
-        
-        //console.log(lstDevTeam);
-        //console.log(lstQATeam);
-        //console.log(lstSATeam);
 
         let lstRows = lstWI.map(function (item) {
             return wiMapper(item);
         });
-
-        //console.table(lstRows);
-
 
         let t = 0;
         for(let x=1;x<lstRows.length;x++){
@@ -71,20 +70,28 @@
                 lstRowsAux = [...lstRows];
                 let lstEpicRows = lstRowsAux.splice(t, x);
                 
-                //console.log(lstEpicRows);
-                
                 //Start
-                let lstResource = [];
+                let lstDev = [];
+                let lstQA = [];
+                let lstSA = [];
+                
                 lstEpicRows.map(function (item) {
-                    //console.log("#");
-                    //console.log(item.AssignedTo);
-                    if(lstResource.indexOf(item.AssignedTo) < 0 && item.AssignedTo !== '')
-                        lstResource += ", " + item.AssignedTo;
+
+                    if(item.AssignedTo !== ''){
+                        if(lstDevTeam.indexOf(item.AssignedTo) > 0 && lstDev.indexOf(item.AssignedTo) < 0)
+                            lstDev.push(item.AssignedTo);
+                        
+                        else if(lstQATeam.indexOf(item.AssignedTo) > 0 && lstQA.indexOf(item.AssignedTo) < 0)
+                            lstQA.push(item.AssignedTo);
+
+                        else if(lstSATeam.indexOf(item.AssignedTo) > 0 && lstSA.indexOf(item.AssignedTo) < 0)
+                            lstSA.push(item.AssignedTo);
+                    }
                 });
 
-                console.log(x);
-                console.log(lstRows[t]);
-                lstRows[t].Dev = lstResource.toString().substring(1);
+                lstRows[t].Dev = lstDev.toString();
+                lstRows[t].QA = lstQA.toString();
+                lstRows[t].SA = lstSA.toString();
                 
                 t = x;
             }
