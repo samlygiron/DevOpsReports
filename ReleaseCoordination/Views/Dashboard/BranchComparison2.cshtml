@@ -187,8 +187,8 @@
                         let html = "";
                         if (value !== undefined) {
                             html = value.map(function (wi) {
-                                if (wi.fields !== undefined && wi.fields["Custom.TargetedReleaseDate"] !== undefined)
-                                    return moment(wi.fields["Custom.TargetedReleaseDate"]).format("MM/DD/YYYY");
+                                if (wi.fields !== undefined && wi.fields["Microsoft.VSTS.Scheduling.TargetDate"] !== undefined)
+                                    return moment(wi.fields["Microsoft.VSTS.Scheduling.TargetDate"]).format("MM/DD/YYYY");
                             });
                         }
                         return html.toString();
