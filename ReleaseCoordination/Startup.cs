@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using RS.data.Context;
 using RS.data.Interfaces;
 using RS.data.Services;
+using System;
 
 namespace ReleaseCoordination
 {
@@ -30,6 +31,15 @@ namespace ReleaseCoordination
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews().AddNewtonsoftJson();
+
+            //services.AddCaching();
+            //this is the NB line for this post
+            services.AddSession(o =>
+            {
+                o.IdleTimeout = TimeSpan.FromSeconds(3600);
+            });
+            services.AddMvc();
+
             services.AddDbContextPool<RSContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("RSDB"));
@@ -42,6 +52,7 @@ namespace ReleaseCoordination
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseSession();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
