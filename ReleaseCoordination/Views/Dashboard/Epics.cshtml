@@ -47,9 +47,9 @@
         { title: "Project healt", data: "ProjectHealt", defaultContent: "" },
         { title: "Project name", data: "Title", defaultContent: "", responsivePriority: 1 },
         { title: "QA CPLT", data: "QACPLT", defaultContent: "" },
-        { title: "QA end", data: "QAEnd", defaultContent: "" },
+        { title: "QA end", data: "QAEnd", defaultContent: "", render: function (value) { return value ===  '' ? '' : formatDate(value); } },
         { title: "QA LOE", data: "QALOE", defaultContent: "" },
-        { title: "QA start", data: "QAStart", defaultContent: "" },
+        { title: "QA start", data: "QAStart", defaultContent: "", render: function (value) { return value ===  '' ? '' : formatDate(value); } },
         { title: "SA CPLT", data: "SACPLT", defaultContent: "" },
         { title: "SA LOE", data: "SALoe", defaultContent: "" },
         { title: "ViaOne product", data: "ViaOneProduct", defaultContent: "" },
@@ -115,7 +115,9 @@
         let lstRows = lstWI.map(function (item) {
             return wiMapper(item);
         });
-
+        
+        //console.log(lstRows);
+        
         let t = 0;
         let topDev = 0;
         let topQA = 0;
@@ -129,68 +131,72 @@
                 
                 //Start
                 let lstDev = [];
-                let lstQA = [];
-                let lstSA = [];
-
-                let cd = 1;
-                let cq = 1;
-                let csa = 1;
-                
+                let cdev = 1;
                 let DevLOE = 0;
-                let QALOE = 0;
 
-                //console.log("#####" + lstRows[t].Id);
+                let lstQA = [];
+                let cqa = 1;
+                let QALOE = 0;
+                
+                let lstSA = [];
+                let csa = 1;
 
                 lstEpicRows.map(function (item) {
                     //console.log(item);
 
                     if(item.Type === 'Feature'){
+                        
+                        //##### SA DATA ##### 
+                        
                         if(lstSA.indexOf(item.AssignedTo) < 0){
                             lstSA.push(item.AssignedTo);
                             lstRows[t][`SA${csa}`] = item.AssignedTo;
-                            if(item.SAStart !== undefined)
-                                lstRows[t].SAStart = item.SAStart;
-                            if(item.SAEnd !== undefined)
-                                lstRows[t].SAEnd = item.SAEnd;
                             csa++;
                         }
+
+                        if(item.SAStart !== undefined && (item.SAStart < lstRows[t].SAStart || lstRows[t].SAStart === ""))
+                            lstRows[t].SAStart = item.SAStart;
+                        if(item.SAEnd !== undefined && (item.SAEnd > lstRows[t].SAEnd || lstRows[t].SAEnd === ""))
+                            lstRows[t].SAEnd = item.SAEnd;
                     }
 
                     if(item.Type === 'User Story'){
+                        
+                        //##### DEV DATA ##### 
+                        
                         DevLOE += item.DevLOE;
-                        QALOE += item.QALOE;
-                        
-                        if(item.DevStart !== undefined)
+
+                        if(item.AssignedTo !== ''){
+                            if(lstDevTeam.indexOf(item.AssignedTo) > 0 && lstDev.indexOf(item.AssignedTo) < 0){
+                                lstDev.push(item.AssignedTo);
+                                lstRows[t][`Dev${cdev}`] = item.AssignedTo;
+                                cdev++;
+                            }
+                        }
+                        if(item.DevStart !== undefined && (item.DevStart < lstRows[t].DevStart || lstRows[t].DevStart === ""))
                             lstRows[t].DevStart = item.DevStart;
-                        if(item.DevEnd !== undefined)
+                        if(item.DevEnd !== undefined && (item.DevEnd > lstRows[t].DevEnd  || lstRows[t].DevEnd === ""))
                             lstRows[t].DevEnd = item.DevEnd;
-                    }
+                        
+                        //##### QA DATA ##### 
+                        
+                        QALOE += item.QALOE;
 
-                    if(item.AssignedTo !== ''){
-                        if(lstDevTeam.indexOf(item.AssignedTo) > 0 && lstDev.indexOf(item.AssignedTo) < 0){
-                            lstDev.push(item.AssignedTo);
-                            
-                            lstRows[t][`Dev${cd}`] = item.AssignedTo;
-                            cd++;
+                        if(item.QA !== ''){
+                            if(lstQA.indexOf(item.QA) < 0){
+                                lstQA.push(item.QA);
+                                lstRows[t][`QA${cqa}`] = item.QA;
+                                cqa++;
+                            }
                         }
-                        
-                        let cDev = lstDev.length;
-                        if( cDev > topDev )
-                            topDev = cDev;
-                            
-                            //lstCols.push({title: `Dev${c}`, data: `Dev${c}`, defaultContent: ""});
-                        
-                        
-                    }
-                    if(item.QA !== ''){
-                        if(lstQA.indexOf(item.QA) < 0){
-                            lstQA.push(item.QA);
-                            
-                            lstRows[t][`QA${cq}`] = item.QA;
-                            cq++;
-                        }
-                    }
 
+                        if(item.QAStart !== undefined && (item.QAStart < lstRows[t].QAStart  || lstRows[t].QAStart === ""))
+                            lstRows[t].QAStart = item.QAStart;
+                        if(item.QAEnd !== undefined && (item.QAEnd > lstRows[t].QAEnd || lstRows[t].QAEnd === ""))
+                            lstRows[t].QAEnd = item.QAEnd;
+
+                        
+                    }
                 });
 
                 lstRows[t].Dev = lstDev.toString();
@@ -199,7 +205,6 @@
 
                 lstRows[t].DevLOE = DevLOE;
                 lstRows[t].QALOE = QALOE;
-                //console.log(t + "#" + DevLOE);
 
                 t = x;
             }
@@ -224,10 +229,18 @@
             HLOE: item.fields['Microsoft.VSTS.Scheduling.Effort'],
             ViaOneProduct: 'Smarty.ly',
             RequestStatus: item.fields['System.State'],
+            
+            //Dev
             DevLOE: item.fields['Custom.LOE'] === undefined ? 0 : item.fields['Custom.LOE'],
-            QALOE: item.fields['Custom.QALOE'] === undefined ? 0 : item.fields['Custom.QALOE'],
             DevStart: item.fields['System.WorkItemType'] === 'User Story' ? item.fields['Custom.DevStartDate'] : '',
             DevEnd: item.fields['System.WorkItemType'] === 'User Story' ? item.fields['Custom.DevEndDate'] : '',
+            
+            //QA
+            QALOE: item.fields['Custom.QALOE'] === undefined ? 0 : item.fields['Custom.QALOE'],
+            QAStart: item.fields['System.WorkItemType'] === 'User Story' ? item.fields['Custom.QAStartDate'] : '',
+            QAEnd: item.fields['System.WorkItemType'] === 'User Story' ? item.fields['Custom.QAEndDate'] : '',
+            
+            //SA
             SAStart: item.fields['System.WorkItemType'] === 'Feature' ? item.fields['Microsoft.VSTS.Scheduling.StartDate'] : '',
             SAEnd: item.fields['System.WorkItemType'] === 'Feature' ? item.fields['Microsoft.VSTS.Scheduling.TargetDate'] : ''
         };
