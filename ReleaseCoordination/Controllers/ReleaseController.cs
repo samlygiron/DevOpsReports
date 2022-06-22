@@ -13,6 +13,17 @@ namespace ReleaseCoordination.Controllers
             this.configuration = configuration;
         }
 
+        public IActionResult July(bool isWidget = false)
+        {
+            SettingsModel model = new SettingsModel(configuration);
+            ViewBag.Host = model.Host;
+            ViewBag.UpdatedDate = model.UpdatedDate;
+            ViewBag.CurrentRelease = model.CurrentRelease;
+            ViewBag.IsOffCycle = model.IsOffCycle;
+            ViewBag.IsWidget = isWidget;
+            return View();
+        }
+
         public IActionResult June(bool isWidget = false)
         {
             SettingsModel model = new SettingsModel(configuration);
@@ -112,17 +123,6 @@ namespace ReleaseCoordination.Controllers
         }
 
         public IActionResult October(bool isWidget = false)
-        {
-            SettingsModel model = new SettingsModel(configuration);
-            ViewBag.Host = model.Host;
-            ViewBag.UpdatedDate = model.UpdatedDate;
-            ViewBag.CurrentRelease = model.CurrentRelease;
-            ViewBag.IsOffCycle = model.IsOffCycle;
-            ViewBag.IsWidget = isWidget;
-            return View();
-        }
-
-        public IActionResult July(bool isWidget = false)
         {
             SettingsModel model = new SettingsModel(configuration);
             ViewBag.Host = model.Host;
