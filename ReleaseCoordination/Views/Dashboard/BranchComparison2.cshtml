@@ -50,11 +50,14 @@
 
     async function getBranchCommits(branch, top, text) {
         let lstResp = await getCommits(branch, top);
-        let i = lstResp.findIndex(x => x.comment === text);
 
-        lstResp = lstResp.slice(0, i + 1);
+        let i = lstResp.findIndex(x => x.comment === text);
+        i = i === -1 ? top : i;
+
+        lstResp = lstResp.slice(0, (i + 1));
 
         lstResp.map(function (item) {
+
             if (item.comment.substring(0, 10) == "Merged PR ")
                 item.pullRequestId = item.comment.substring(10, item.comment.indexOf(":"));
             item.repository = { id: repoId };
@@ -94,6 +97,7 @@
     }
 
     async function getWorkItemsDetail(lstPR, resolve) {
+
         let lstWIId = [];
         lstPR.map(function (item) {
             if (item.lstWIDetail === undefined && item.lstWI !== undefined && item.lstWI !== null)
@@ -110,9 +114,12 @@
     }
 
     async function getCommits(branch, top) {
+
         return new Promise((resolve, reject) => {
+            console.log("#");
             fetch(`${gitBaseUrl}repositories/${repoId}/commits?searchCriteria.itemVersion.version=${branch}&searchCriteria.$skip=${0}&searchCriteria.$top=${top}&searchCriteria.showOldestCommitsFirst=true&api-version=6.0`)
                 .then((lst) => {
+                    console.log(lst);
                     resolve(lst.value);
                 });
         });
