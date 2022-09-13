@@ -55,6 +55,8 @@
         { title: "ViaOne product", data: "ViaOneProduct", defaultContent: "" },
         { title: "Request status", data: "RequestStatus", defaultContent: "" },
         { title: "Road to green", data: "RoadTogreen", defaultContent: "" },
+
+        //{ title: "Features", data: "SFeature", defaultContent: "" },
         //{ title: "Dev1", data: "Dev1", defaultContent: "" },
         //{ title: "Dev2", data: "Dev2", defaultContent: "" },
         //{ title: "Dev3", data: "Dev3", defaultContent: "" },
@@ -142,9 +144,9 @@
                 let csa = 1;
 
                 lstEpicRows.map(function (item) {
-                    //console.log(item);
 
                     if(item.Type === 'Feature'){
+                        console.log(item);
                         
                         //##### SA DATA ##### 
                         
@@ -158,6 +160,9 @@
                             lstRows[t].SAStart = item.SAStart;
                         if(item.SAEnd !== undefined && (item.SAEnd > lstRows[t].SAEnd || lstRows[t].SAEnd === ""))
                             lstRows[t].SAEnd = item.SAEnd;
+                        
+                        let SFeature = " " + item.Id + " " + item.Title;
+                        lstRows[t].SFeature = lstRows[t].SFeature === undefined ? SFeature : lstRows[t].SFeature + "</br>" + SFeature;
                     }
 
                     if(item.Type === 'User Story'){
