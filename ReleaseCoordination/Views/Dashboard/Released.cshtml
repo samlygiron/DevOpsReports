@@ -65,6 +65,7 @@
         customize();
         renderTable();
         getData().then((lstPR) => {
+            console.log(lstPR);
             $table.clear().rows.add(lstPR).draw();
             $(".table").removeClass("invisible").addClass("visible");
             $(".state").removeClass("visible").addClass("invisible").hide();
