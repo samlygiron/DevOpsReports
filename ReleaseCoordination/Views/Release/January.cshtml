@@ -1,11 +1,11 @@
 ﻿@{
-    ViewData["Title"] = "Release - January";
+    ViewData["Title"] = "Release - December";
 }
 
 <script>
-    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/4af388c3-516e-436d-9e86-602926fcd90f/?api-version=6.0`;
-
-    const releases = ['01/06', '01/21', '01/28'];
+    const releaseReportURl = `https://dev.azure.com/${organizationName}/${projectName}/_apis/wit/wiql/db373678-cd18-4a09-baf2-ee3b7f8f7f4a`;
+    
+    const releases = ['01/20'];
 
     const isWidget = ('@ViewBag.IsWidget' === 'True');
     const type = [];
@@ -13,7 +13,8 @@
     type["Task"] = { icon: "sticky-note", className: "cTask" };
     type["UserStory"] = { icon: "leanpub", className: "cUserStory" };
     type["Feature"] = { icon: "trophy", className: "cFeature" };
-    type["Ticket"] = { icon: "leanpub", className: "cUserStory" };
+    type["Ticket"] = { icon: "fa-ticket", className: "cUserStory" };
+    type["Epic"] = { icon: "star", className: "cEpic" };
 
     const badge = [];
     badge["completed"] = "success";
@@ -26,8 +27,14 @@
         let lstQryRes = await fetch(`${releaseReportURl}`);
         let lstWIds = lstQryRes.workItemRelations.map(o => o.target.id);
         let lstWI = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(0, 200).toString()}&$expand=relations`);
-
-        lstWI = lstWI.value;
+        
+        try{
+        let lstWI2 = await fetch(`${witBaseUrl}&ids=${lstWIds.slice(200).toString()}&$expand=relations`);
+        lstWI = [...lstWI.value, ...lstWI2.value];
+        }
+        catch(ex){
+            lstWI = lstWI.value;
+        }
 
         let lstPR = await PullRequest.getPullRequestList(250);
         await PullRequest.getWorkItems(lstPR);
@@ -38,7 +45,7 @@
             item.PR = lstPRF.length === 0 ? [] : lstPRF;
             return wiMapper(item);
         });
-
+        
         //Clean US
         let lstRowsClean = lstRows.filter(function (row) {
             let releaseDate = row.ReleaseDate === undefined ? '-1' : moment(row.ReleaseDate).format("MM/DD").toString();
@@ -61,7 +68,19 @@
             else return row;
         });
 
+         //Clean Epics
+        lstRowsClean = lstRowsClean.filter(function (row) {
+            if (row.Type === 'Epic' ) {
+                let hasChilds = lstRowsClean.filter(wi => wi.ParentId == row.Id).length;
+                if (hasChilds > 0)
+                    return row;
+            }
+            else return row;
+        });
+        
         return lstRowsClean;
+        
+       return lstRows;
     }
 
     function getSummary(lstRows) {
@@ -74,7 +93,10 @@
             Development: 0,
             MoreInfo: 0,
             ReadyForDev: 0,
-            Count: 0
+            Count: 0,
+            TUS: 0,
+            TBug: 0,
+            TTask: 0
         }
 
         lstRows.map(function (row) {
@@ -97,6 +119,15 @@
                 if (row.State == "Ready for Dev" || row.State == "New")
                     summary.ReadyForDev++;
             }
+            if (row.Type == "User Story") {
+               summary.TUS ++;
+            }
+            if (row.Type == "Bug") {
+                summary.TBug ++;
+            }
+            if (row.Type == "Task") {
+                summary.TTask ++;
+            }
         });
 
         return summary;
@@ -110,8 +141,7 @@
             State: item.fields['System.State'],
             Type: item.fields['System.WorkItemType'],
             //ReleaseDate: item.fields['Custom.ReleaseDate'],
-            ParentId: (item.fields['System.Parent'] === undefined || item.fields['System.Parent'] === 93869 || item.fields['System.Parent'] === 110633 || item.fields['System.Parent'] === 110646)
-            || (item.fields['System.WorkItemType'] === 'Feature') ? '' : item.fields['System.Parent'],
+            ParentId: (item.fields['System.Parent'] === undefined) ? '' : item.fields['System.Parent'],
             ClientandBusinessCommitted: item.fields['Custom.ClientandBusinessCommitted'],
             Priority: item.fields['Microsoft.VSTS.Common.Priority'],
             Risk: item.fields['Microsoft.VSTS.Common.Risk'],
@@ -121,9 +151,10 @@
             State: item.fields['System.State'],
             Tags: item.fields['System.Tags'],
             Title: item.fields['System.Title'],
-            ReleaseDate: item.fields['Custom.TargetedReleaseDate'],
+            ReleaseDate: item.fields['Microsoft.VSTS.Scheduling.TargetDate'],
             ProjectManager: item.fields['Custom.ProjectManager'] === undefined ? '' : item.fields['Custom.ProjectManager'].uniqueName,
             IterationPath: item.fields['System.IterationPath'],
+            Area: item.fields['System.AreaPath'],
             AssignedTo: item.fields['System.AssignedTo'] === undefined ? '' : item.fields['System.AssignedTo'].uniqueName,
             LOE: item.fields['Custom.LOE'],
             DevStartDate: item.fields['Custom.DevStartDate'],
@@ -147,11 +178,11 @@
 
         if (releaseDate !== "") {
             let lstTask = null;
-            lstTask = lstTable.filter(row => (row.Type == "Task" || row.Type == "Bug") && row.ReleaseDate !== undefined && (moment(row.ReleaseDate).local().format("MM/DD").toString() == releaseDate));
+            lstTask = lstTable.filter(row => (row.Type == "Task" || row.Type == "Bug" || row.Type == "User Story" || row.Type == "Feature") && row.ReleaseDate !== undefined && (moment(row.ReleaseDate).local().format("MM/DD").toString() == releaseDate));
 
             let lstUS = [];
             lstTask.map(function (item) {
-                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket") && row.Id == item.ParentId);
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket" || row.Type == "Epic") && row.Id == item.ParentId);
                 lstParent.map(function (item) {
                     let test = lstUS.filter(row => row.Id == item.Id).length;
                     if (test == 0)
@@ -161,7 +192,7 @@
 
             let lstFeature = [];
             lstUS.map(function (item) {
-                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket") && row.Id == item.ParentId);
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket" || row.Type == "Epic") && row.Id == item.ParentId);
                 lstParent.map(function (item) {
                     let test = lstFeature.filter(row => row.Id == item.Id).length;
                     if (test == 0)
@@ -169,7 +200,17 @@
                 })
             });
 
-            lstRows = [...lstTask, ...lstUS, ...lstFeature];
+            let lstEpic = [];
+            lstFeature.map(function (item) {
+                let lstParent = lstTable.filter(row => (row.Type == "User Story" || row.Type == "Feature" || row.Type == "Ticket" || row.Type == "Epic") && row.Id == item.ParentId);
+                lstParent.map(function (item) {
+                    let test = lstEpic.filter(row => row.Id == item.Id).length;
+                    if (test == 0)
+                        lstEpic.push(item);
+                })
+            });
+
+            lstRows = [...lstTask, ...lstUS, ...lstFeature, ...lstEpic];
             lstRows = [...new Set(lstRows)];
             lstRows = assemble(lstRows);
         }
@@ -179,8 +220,6 @@
 
     function assemble(arr, parentId = '', result = []) {
         arr.forEach(el => {
-            console.log(el);
-
             if (el.ParentId == parentId) {
                 result.push(el);
                 assemble(arr, el.Id, result);
@@ -201,9 +240,17 @@
                 exportOptions: {
                     columns: [ 2, 3, 4, 5, 6, 7, 8, 9, 10,
                         1, 14, 15, 16, 17, 18, 19, 20,
-                        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+                        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
                 },
-            }],
+            },
+            {
+                text: 'Excel2',
+                action: function ( e, dt, node, config ) {
+                    var data = $table.rows().data();
+                    fetchReport(data.splice(0, data.length));
+                }
+            }
+            ],
             columns: [
                 {
                     title: "Type", data: "Type", className: "dt-center", responsivePriority: 1, render: function (value, meta, row) {
@@ -257,6 +304,7 @@
                 },
                 { title: "Release Date", data: "ReleaseDate", defaultContent: "", responsivePriority: 9, render: function (value) { return formatDate(value); } },
                 { title: "Project Manager", data: "ProjectManager", defaultContent: "", responsivePriority: 10001 },
+                { title: "Area", data: "Area", defaultContent: "", responsivePriority: 10001 },
                 { title: "Iteration Path", data: "IterationPath", defaultContent: "", responsivePriority: 10001 },
                 { title: "Assigned To", data: "AssignedTo", defaultContent: "", responsivePriority: 10001 },
                 { title: "LOE", data: "LOE", defaultContent: "", responsivePriority: 10001 },
@@ -299,11 +347,72 @@
         let sum2 = sum.QaPassed + sum.QaTesting + sum.QaDeploy + sum.DevReview + sum.Development + sum.ReadyForDev;
         $("#Count2").text(sum2);
 
+        $("#TUS").text(sum.TUS);
+        $("#TTask").text(sum.TTask);
+        $("#TBug").text(sum.TBug);
+
+
         $table.clear().rows.add(lst).draw();
         $(".table").removeClass("invisible").addClass("visible");
         $(".state").removeClass("visible").addClass("invisible").hide();
         $(".tt").tooltip();
         $("body").resize()
+    }
+
+    function fetchReport(data) {
+        return new Promise((resolve, reject) => {
+            let lstReport = data.map(function(item) {
+                return {
+                    Id: item.Id,
+                    State: item.State,
+                    Type: item.Type,
+                    ParentId: item.ParentId,
+                    ClientandBusinessCommitted: item.ClientandBusinessCommitted,
+                    Priority: item.Priority,
+                    Risk: item.Risk,
+                    Severity: item.Severity,
+                    WorkItemType: item.WorkItemType,
+                    InternationalDevOpsID: item.InternationalDevOpsID,
+                    State: item.State,
+                    Tags: item.Tags,
+                    Title: item.Title,
+                    ReleaseDate: item.ReleaseDate,
+                    ProjectManager: item.ProjectManager,
+                    IterationPath: item.IterationPath,
+                    Area: item.Area,
+                    AssignedTo: item.AssignedTo,
+                    LOE: item.LOE,
+                    DevStartDate: item.DevStartDate,
+                    DevEndDate: item.DevEndDate,
+                    DevPctComplete: item.DevPctComplete,
+                    OriginalEstimate: item.OriginalEstimate,
+                    RemainingWork: item.RemainingWork,
+                    CompletedWork: item.CompletedWork,
+                    DueDate: item.DueDate,
+                    ConfigChanges: item.ConfigChanges,
+                    QAResource: item.QAResource,
+                    StartDate: item.StartDate,
+                    EndDate: item.EndDate,
+                    QALOE: item.QALOE,
+                    QAActualHours: item.QAActualHours
+                }
+            });
+           
+
+            $.ajax({
+                url: '/report/releasepartial',
+                type: "POST", 
+                dataType: "JSON", 
+                contentType: "application/json",
+                data: JSON.stringify(lstReport),
+                error: function () { resolve(); },
+                success: function (resp) { 
+                    console.log('/report/releasedownload?fileGuid=' + resp.fileGuid + '&filename=' + resp.fileName);
+                    window.location = '/report/releasedownload?fileGuid=' + resp.fileGuid + '&filename=' + resp.fileName;
+                    resolve(); 
+                }
+            });
+        });
     }
 
     $(document).ready(function () {
@@ -422,6 +531,22 @@
                     <td id="MoreInfo"></td>
                     <td id="ReadyForDev"></td>
                     <td id="Count2"></td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="table table-bordered table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>User Storys</th>
+                    <th>Tasks</th>
+                    <th>Bugs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="TUS"></td>
+                    <td id="TTask"></td>
+                    <td id="TBug"></td>
                 </tr>
             </tbody>
         </table>
