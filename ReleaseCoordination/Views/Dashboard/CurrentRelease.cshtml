@@ -281,7 +281,7 @@
         </div>
         <div class="col-md-6">
             <div class="state visible pull-left"><i class="fa fa-clock-o"></i> <span class="state-text">Loading...</span></div>
-            <div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>
+            @*<div class="pull-left table invisible"><span data-toggle="tooltip" data-placement="bottom" title="updated @(ViewBag.UpdatedDate)" class="tt current-release badge badge-primary">Current release: @ViewBag.CurrentRelease.ToString("MM/dd/yyyy") @(ViewBag.IsOffCycle?"- OffCycle":"") </span></div>*@
         </div>
         <div class="col-md-1">
             <div class="table invisible is-widget"><a class="table invisible" href="@(ViewBag.Host)dashboard/currentrelease" target='_blank'><i data-toggle="tooltip" data-placement="left" title="expand" class="tt pull-right fa fa-external-link"></i></a></div>

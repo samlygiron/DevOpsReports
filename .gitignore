@@ -366,3 +366,5 @@ FodyWeavers.xsd
 /ReleaseCoordination/appsettings.json
 /RS.api/appsettings.json
 /RS.api/Properties/ServiceDependencies/mihooks2 - Web Deploy1/profile.arm.json
+/ReleaseCoordination/Properties/ServiceDependencies/mirelease2 - Zip Deploy/profile.arm.json
+/RS.api/Properties/ServiceDependencies/mihooks3 - Zip Deploy/profile.arm.json
